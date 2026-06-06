@@ -1,16 +1,8 @@
-// ==========================================
-// 1. GLOBAL VARIABLES
-// ==========================================
-
 let allProducts = [];
 let cart = {};
 let currentPage = 'home';
 
-// ==========================================
-// 2. INITIALIZATION
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     detectCurrentPage();
     initializePage();
     updateCartCount();
@@ -20,316 +12,158 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function detectCurrentPage() {
     const path = window.location.pathname;
-    
-    if (path.includes('products')) {
-        currentPage = 'products';
-    } else if (path.includes('cart')) {
-        currentPage = 'cart';
-    } else if (path.includes('checkout')) {
-        currentPage = 'checkout';
-    } else {
-        currentPage = 'home';
-    }
+    if (path.includes('products'))      currentPage = 'products';
+    else if (path.includes('cart'))     currentPage = 'cart';
+    else if (path.includes('checkout')) currentPage = 'checkout';
+    else if (path.includes('orders'))   currentPage = 'orders';
+    else currentPage = 'home';
 }
 
 function initializePage() {
-    switch(currentPage) {
-        case 'products':
-            initProductsPage();
-            break;
-        case 'cart':
-            initCartPage();
-            break;
-        case 'checkout':
-            initCheckoutPage();
-            break;
-        case 'home':
-            initHomePage();
-            break;
+    switch (currentPage) {
+        case 'products': initProductsPage(); break;
+        case 'cart':     initCartPage();     break;
+        case 'checkout': initCheckoutPage(); break;
+        case 'orders':   initOrdersPage();   break;
+        case 'home':     initHomePage();     break;
     }
 }
-
-// ==========================================
-// 3. IMAGE HANDLING FUNCTIONS
-// ==========================================
-
-function getProductImage(product) {
-    if (product.image) {
-        return product.image;
-    }
-    if (product.image_url) {
-        return product.image_url;
-    }
-    return getFallbackImage(product.name);
-}
-
-function getProductThumbnail(product) {
-    const imageUrl = getProductImage(product);
-    if (imageUrl.includes('unsplash.com')) {
-        return imageUrl.replace('w=400&h=300', 'w=150&h=150');
-    }
-    return imageUrl;
-}
-
-function getFallbackImage(productName) {
-    const initial = productName.charAt(0).toUpperCase();
-    const colors = ['667eea', '764ba2', 'f093fb', '4facfe', '43e97b'];
-    const colorIndex = productName.charCodeAt(0) % colors.length;
-    const bgColor = colors[colorIndex];
-    
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(productName)}&size=400&background=${bgColor}&color=fff&bold=true&font-size=0.4`;
-}
-
-// ==========================================
-// 4. NAVBAR FUNCTIONALITY
-// ==========================================
 
 function initNavbarScroll() {
     const navbar = document.querySelector('.navbar');
-    
-    if (navbar) {
-        window.addEventListener('scroll', function() {
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-    }
+    if (navbar) window.addEventListener('scroll', () =>
+        navbar.classList.toggle('scrolled', window.scrollY > 50));
 }
 
 function initSmoothScroll() {
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
-            
             if (href !== '#') {
                 e.preventDefault();
-                const target = document.querySelector(href);
-                
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
+                const t = document.querySelector(href);
+                if (t) t.scrollIntoView({ behavior: 'smooth' });
             }
         });
     });
 }
 
-// ==========================================
-// 5. CART MANAGEMENT
-// ==========================================
-
+// ── CART ──────────────────────────────────────
 function loadCart() {
-    const savedCart = sessionStorage.getItem('cart');
-    if (savedCart) {
-        try {
-            cart = JSON.parse(savedCart);
-        } catch (error) {
-            console.error('Error loading cart:', error);
-            cart = {};
-        }
-    }
+    try { cart = JSON.parse(sessionStorage.getItem('cart') || '{}'); }
+    catch { cart = {}; }
     return cart;
 }
 
 function saveCart() {
-    try {
-        sessionStorage.setItem('cart', JSON.stringify(cart));
-    } catch (error) {
-        console.error('Error saving cart:', error);
-    }
+    sessionStorage.setItem('cart', JSON.stringify(cart));
 }
 
 function updateCartCount() {
     loadCart();
-    const count = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-    const cartCountElement = document.getElementById('cart-count');
-    
-    if (cartCountElement) {
-        cartCountElement.textContent = count;
-        cartCountElement.style.transform = 'scale(1.3)';
-        setTimeout(() => {
-            cartCountElement.style.transform = 'scale(1)';
-        }, 200);
-    }
+    const count = Object.values(cart).reduce((s, q) => s + q, 0);
+    const el = document.getElementById('cart-count');
+    if (el) el.textContent = count;
 }
 
 async function addToCart(productId, productName) {
     try {
-        const response = await fetch('/api/cart/add', {
+        const res = await fetch('/api/cart/add', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                product_id: productId,
-                quantity: 1
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: productId, quantity: 1 })
         });
-
-        const data = await response.json();
-
-        if (response.ok) {
+        const data = await res.json();
+        if (res.ok) {
             loadCart();
-            if (cart[productId]) {
-                cart[productId]++;
-            } else {
-                cart[productId] = 1;
-            }
+            cart[productId] = (cart[productId] || 0) + 1;
             saveCart();
             updateCartCount();
-            
-            showNotification(`${productName} added to cart!`, 'success');
-            
-            const buttons = document.querySelectorAll(`[onclick*="addToCart(${productId}"]`);
-            buttons.forEach(button => {
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-check me-2"></i>Added!';
-                button.disabled = true;
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                }, 1500);
-            });
+            showNotification(`"${productName}" added to cart!`, 'success');
+            const btn = document.querySelector(`[data-pid="${productId}"]`);
+            if (btn) {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Added!';
+                btn.disabled = true;
+                setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500);
+            }
         } else {
             showNotification(data.error || 'Failed to add to cart', 'danger');
         }
-    } catch (error) {
-        console.error('Error adding to cart:', error);
-        showNotification('An error occurred. Please try again.', 'danger');
+    } catch {
+        showNotification('Server not reachable. Is Flask running on port 5000?', 'danger');
     }
 }
 
-function updateQuantity(productId, newQuantity) {
-    if (newQuantity <= 0) {
-        removeFromCart(productId);
-        return;
-    }
-
+function updateQuantity(productId, newQty) {
+    if (newQty <= 0) { removeFromCart(productId); return; }
     const product = allProducts.find(p => p.id == productId);
-    
-    if (product && newQuantity > product.stock) {
-        showNotification(`Only ${product.stock} items available in stock`, 'warning');
-        return;
+    if (product && newQty > product.stock) {
+        showNotification(`Only ${product.stock} in stock`, 'warning'); return;
     }
-
     loadCart();
-    cart[productId] = newQuantity;
+    cart[productId] = newQty;
     saveCart();
-    
-    if (currentPage === 'cart') {
-        displayCart();
-    }
-    
     updateCartCount();
+    if (currentPage === 'cart') displayCart();
 }
 
 function removeFromCart(productId) {
-    const product = allProducts.find(p => p.id == productId);
-    const productName = product ? product.name : 'Item';
-    
     loadCart();
+    const product = allProducts.find(p => p.id == productId);
     delete cart[productId];
     saveCart();
-    
-    if (currentPage === 'cart') {
-        displayCart();
-    }
-    
     updateCartCount();
-    showNotification(`${productName} removed from cart`, 'info');
+    if (currentPage === 'cart') displayCart();
+    showNotification(`${product ? product.name : 'Item'} removed`, 'info');
 }
 
 function clearCart() {
     cart = {};
     saveCart();
     updateCartCount();
-    
-    if (currentPage === 'cart') {
-        displayCart();
-    }
+    if (currentPage === 'cart') displayCart();
 }
 
-// ==========================================
-// 6. HOME PAGE FUNCTIONALITY
-// ==========================================
-
+// ── HOME ──────────────────────────────────────
 function initHomePage() {
-    console.log('Home page initialized');
-    
-    const heroSection = document.querySelector('.hero-section');
-    if (heroSection) {
-        window.addEventListener('scroll', function() {
-            const scrolled = window.pageYOffset;
-            heroSection.style.transform = `translateY(${scrolled * 0.5}px)`;
-        });
-    }
-    
-    animateStatsOnScroll();
-}
-
-function animateStatsOnScroll() {
-    const statNumbers = document.querySelectorAll('.stat-number');
-    
-    if (statNumbers.length === 0) return;
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const target = entry.target;
-                const finalValue = target.textContent;
-                animateValue(target, 0, parseInt(finalValue), 2000);
-                observer.unobserve(target);
+    const statNums = document.querySelectorAll('.stat-number');
+    if (!statNums.length) return;
+    const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                const el = e.target;
+                const num = parseInt(el.textContent.replace(/\D/g, ''));
+                const suffix = el.textContent.includes('%') ? '%' : '+';
+                if (num) animateValue(el, 0, num, 1800, suffix);
+                obs.unobserve(el);
             }
         });
     }, { threshold: 0.5 });
-    
-    statNumbers.forEach(stat => observer.observe(stat));
+    statNums.forEach(s => obs.observe(s));
 }
 
-function animateValue(element, start, end, duration) {
-    const range = end - start;
-    const increment = range / (duration / 16);
-    let current = start;
-    
-    const timer = setInterval(() => {
-        current += increment;
-        if (current >= end) {
-            element.textContent = end + '+';
-            clearInterval(timer);
-        } else {
-            element.textContent = Math.floor(current) + '+';
-        }
+function animateValue(el, start, end, duration, suffix = '+') {
+    const step = (end - start) / (duration / 16);
+    let cur = start;
+    const t = setInterval(() => {
+        cur += step;
+        if (cur >= end) { el.textContent = end + suffix; clearInterval(t); }
+        else el.textContent = Math.floor(cur) + suffix;
     }, 16);
 }
 
-// ==========================================
-// 7. PRODUCTS PAGE FUNCTIONALITY
-// ==========================================
-
+// ── PRODUCTS ──────────────────────────────────
 function initProductsPage() {
-    console.log('Products page initialized');
     loadProducts();
-    
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchProducts();
-            }
-        });
-        
-        let searchTimeout;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                if (this.value.length > 2 || this.value.length === 0) {
-                    searchProducts();
-                }
+    const inp = document.getElementById('searchInput');
+    if (inp) {
+        inp.addEventListener('keypress', e => { if (e.key === 'Enter') searchProducts(); });
+        let timer;
+        inp.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                if (this.value.length > 2 || !this.value) searchProducts();
             }, 500);
         });
     }
@@ -337,559 +171,359 @@ function initProductsPage() {
 
 async function loadProducts() {
     try {
-        const response = await fetch('/api/products');
-        allProducts = await response.json();
+        const res = await fetch('/api/products');
+        if (!res.ok) throw new Error();
+        allProducts = await res.json();
         displayProducts(allProducts);
-    } catch (error) {
-        console.error('Error loading products:', error);
+    } catch {
         showError();
     }
+    return allProducts;
 }
 
 function displayProducts(products) {
     const container = document.getElementById('products-container');
-    const countElement = document.getElementById('product-count');
-    
+    const countEl   = document.getElementById('product-count');
     if (!container) return;
-    
-    if (products.length === 0) {
+
+    if (!products.length) {
         container.innerHTML = `
             <div class="col-12">
                 <div class="no-products">
                     <i class="fas fa-box-open fa-5x text-muted mb-4"></i>
                     <h3>No products found</h3>
-                    <p class="text-muted">Try adjusting your search criteria</p>
-                    <button class="btn btn-primary mt-3" onclick="clearSearch()">
-                        <i class="fas fa-redo me-2"></i>Clear Search
-                    </button>
+                    <button class="btn btn-primary mt-3" onclick="clearSearch()">Show All</button>
                 </div>
-            </div>
-        `;
-        if (countElement) {
-            countElement.textContent = '0 products found';
-        }
+            </div>`;
+        if (countEl) countEl.textContent = '0 products found';
         return;
     }
 
-    if (countElement) {
-        countElement.textContent = `${products.length} product${products.length !== 1 ? 's' : ''} found`;
-    }
+    if (countEl) countEl.textContent = `${products.length} product${products.length !== 1 ? 's' : ''} found`;
 
-    container.innerHTML = products.map(product => {
-        const imageUrl = getProductImage(product);
-        const fallbackUrl = getFallbackImage(product.name);
-        
-        return `
-            <div class="col-md-6 col-lg-4 col-xl-3 fade-in">
-                <div class="product-card">
-                    <div class="product-image-wrapper">
-                        <img src="${imageUrl}" 
-                             alt="${escapeHtml(product.name)}" 
-                             class="product-image"
-                             loading="lazy"
-                             onerror="this.onerror=null; this.src='${fallbackUrl}';">
-                    </div>
-                    <div class="product-body">
-                        <h5 class="product-title" title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h5>
-                        <p class="product-description" title="${escapeHtml(product.description)}">${escapeHtml(product.description)}</p>
-                        <div class="product-footer">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="product-price">$${product.price.toFixed(2)}</span>
-                                <span class="badge ${getStockBadgeClass(product.stock)} stock-badge">
-                                    ${getStockText(product.stock)}
-                                </span>
-                            </div>
-                            <button class="btn btn-primary btn-add-cart" 
-                                    onclick="addToCart(${product.id}, '${escapeHtml(product.name)}')"
-                                    ${product.stock === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-cart-plus me-2"></i>${product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                            </button>
+    container.innerHTML = products.map(p => `
+        <div class="col-md-6 col-lg-4 col-xl-3 fade-in">
+            <div class="product-card">
+                <img src="${escHtml(p.image || '')}"
+                     alt="${escHtml(p.name)}"
+                     class="product-image"
+                     onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300/667eea/ffffff?text=${encodeURIComponent(p.name)}'">
+                <div class="product-body">
+                    <h5 class="product-title">${escHtml(p.name)}</h5>
+                    <p class="product-description">${escHtml(p.description)}</p>
+                    <div class="product-footer">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="product-price">$${p.price.toFixed(2)}</span>
+                            <span class="badge ${stockClass(p.stock)} stock-badge">${stockText(p.stock)}</span>
                         </div>
+                        <button class="btn btn-primary btn-add-cart"
+                                data-pid="${p.id}"
+                                onclick="addToCart(${p.id}, '${escHtml(p.name)}')"
+                                ${p.stock === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-cart-plus me-2"></i>${p.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                        </button>
                     </div>
                 </div>
             </div>
-        `;
-    }).join('');
+        </div>`).join('');
 }
 
-function getStockBadgeClass(stock) {
-    if (stock === 0) return 'bg-danger';
-    if (stock <= 5) return 'bg-warning';
-    return 'bg-success';
-}
-
-function getStockText(stock) {
-    if (stock === 0) return 'Out of stock';
-    if (stock <= 5) return `Only ${stock} left`;
-    return `${stock} in stock`;
-}
+function stockClass(s) { return s === 0 ? 'bg-danger' : s <= 5 ? 'bg-warning' : 'bg-success'; }
+function stockText(s)  { return s === 0 ? 'Out of stock' : s <= 5 ? `Only ${s} left` : `${s} in stock`; }
 
 async function searchProducts() {
-    const searchInput = document.getElementById('searchInput');
-    if (!searchInput) return;
-    
-    const query = searchInput.value.trim();
-    
-    if (!query) {
-        displayProducts(allProducts);
-        return;
-    }
-
+    const inp = document.getElementById('searchInput');
+    if (!inp) return;
+    const q = inp.value.trim();
+    if (!q) { displayProducts(allProducts); return; }
     try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const results = await response.json();
-        displayProducts(results);
-    } catch (error) {
-        console.error('Error searching products:', error);
-        showNotification('Error searching products', 'danger');
-    }
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        displayProducts(await res.json());
+    } catch { showNotification('Search failed', 'danger'); }
 }
 
 function clearSearch() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.value = '';
-        displayProducts(allProducts);
-    }
+    const inp = document.getElementById('searchInput');
+    if (inp) { inp.value = ''; displayProducts(allProducts); }
 }
 
 function showError() {
-    const container = document.getElementById('products-container');
-    if (container) {
-        container.innerHTML = `
-            <div class="col-12">
-                <div class="no-products">
-                    <i class="fas fa-exclamation-triangle fa-5x text-danger mb-4"></i>
-                    <h3>Error Loading Products</h3>
-                    <p class="text-muted">Please try again later</p>
-                    <button class="btn btn-primary mt-3" onclick="loadProducts()">
-                        <i class="fas fa-redo me-2"></i>Retry
-                    </button>
-                </div>
-            </div>
-        `;
-    }
+    const c = document.getElementById('products-container');
+    if (c) c.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-5x text-danger mb-4"></i>
+            <h3>Could not load products</h3>
+            <p class="text-muted">Run: <code>python app.py</code> in the flask-ecommerce folder</p>
+            <button class="btn btn-primary mt-3" onclick="loadProducts()">Retry</button>
+        </div>`;
 }
 
-// ==========================================
-// 8. CART PAGE FUNCTIONALITY
-// ==========================================
-
+// ── CART PAGE ─────────────────────────────────
 function initCartPage() {
-    console.log('Cart page initialized');
-    loadProducts().then(() => {
-        displayCart();
-    });
+    loadProducts().then(() => displayCart());
 }
 
 function displayCart() {
-    const container = document.getElementById('cart-items-container');
+    const container   = document.getElementById('cart-items-container');
     const checkoutBtn = document.getElementById('checkout-btn');
-    
     if (!container) return;
-    
     loadCart();
 
-    if (Object.keys(cart).length === 0) {
+    if (!Object.keys(cart).length) {
         container.innerHTML = `
-            <div class="empty-cart">
-                <i class="fas fa-shopping-cart"></i>
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-5x text-muted mb-4" style="opacity:.4"></i>
                 <h3>Your cart is empty</h3>
                 <p class="text-muted mb-4">Add some products to get started!</p>
-                <a href="/products" class="btn btn-primary btn-lg">
-                    <i class="fas fa-shopping-bag me-2"></i>Browse Products
-                </a>
-            </div>
-        `;
-        if (checkoutBtn) {
-            checkoutBtn.style.display = 'none';
-        }
-        updateCartSummary(0);
+                <a href="/products" class="btn btn-primary btn-lg">Browse Products</a>
+            </div>`;
+        if (checkoutBtn) checkoutBtn.style.display = 'none';
+        setCartSummary(0);
         return;
     }
 
-    if (checkoutBtn) {
-        checkoutBtn.style.display = 'block';
-    }
+    if (checkoutBtn) checkoutBtn.style.display = 'block';
 
-    let html = '';
-    let subtotal = 0;
+    let html = '', subtotal = 0;
 
-    Object.entries(cart).forEach(([productId, quantity]) => {
-        const product = allProducts.find(p => p.id == productId);
-        if (product) {
-            const itemTotal = product.price * quantity;
-            subtotal += itemTotal;
-            
-            const thumbnailUrl = getProductThumbnail(product);
-            const fallbackUrl = getFallbackImage(product.name).replace('size=400', 'size=100');
-
-            html += `
-                <div class="cart-item">
-                    <div class="cart-item-image-wrapper">
-                        <img src="${thumbnailUrl}" 
-                             alt="${escapeHtml(product.name)}" 
-                             class="cart-item-image"
-                             onerror="this.onerror=null; this.src='${fallbackUrl}';">
-                    </div>
-                    <div class="cart-item-details">
-                        <div class="cart-item-title">${escapeHtml(product.name)}</div>
-                        <div class="text-muted small mb-2">${escapeHtml(product.description)}</div>
-                        <div class="cart-item-price">$${product.price.toFixed(2)}</div>
-                    </div>
-                    <div class="quantity-control">
-                        <button class="quantity-btn" onclick="updateQuantity(${productId}, ${quantity - 1})" 
-                                title="Decrease quantity">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <span class="quantity-display">${quantity}</span>
-                        <button class="quantity-btn" onclick="updateQuantity(${productId}, ${quantity + 1})" 
-                                title="Increase quantity"
-                                ${quantity >= product.stock ? 'disabled' : ''}>
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    <div class="ms-4">
-                        <strong>$${itemTotal.toFixed(2)}</strong>
-                    </div>
-                    <div class="ms-3">
-                        <i class="fas fa-trash-alt fa-lg remove-btn" 
-                           onclick="removeFromCart(${productId})" 
-                           title="Remove from cart"></i>
-                    </div>
+    Object.entries(cart).forEach(([pid, qty]) => {
+        const p = allProducts.find(x => x.id == pid);
+        if (!p) return;
+        const line = p.price * qty;
+        subtotal += line;
+        html += `
+            <div class="cart-item">
+                <img src="${escHtml(p.image || '')}"
+                     alt="${escHtml(p.name)}"
+                     class="cart-item-image"
+                     onerror="this.onerror=null;this.src='https://via.placeholder.com/100/667eea/ffffff?text=${encodeURIComponent(p.name.slice(0,2))}'">
+                <div class="cart-item-details">
+                    <div class="cart-item-title">${escHtml(p.name)}</div>
+                    <div class="text-muted small">${escHtml(p.description)}</div>
+                    <div class="cart-item-price mt-1">$${p.price.toFixed(2)}</div>
                 </div>
-            `;
-        }
+                <div class="quantity-control">
+                    <button class="quantity-btn" onclick="updateQuantity(${pid}, ${qty - 1})">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span class="quantity-display">${qty}</span>
+                    <button class="quantity-btn" onclick="updateQuantity(${pid}, ${qty + 1})"
+                            ${qty >= p.stock ? 'disabled' : ''}>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="ms-3"><strong>$${line.toFixed(2)}</strong></div>
+                <div class="ms-3">
+                    <i class="fas fa-trash-alt fa-lg remove-btn" onclick="removeFromCart(${pid})"></i>
+                </div>
+            </div>`;
     });
 
     container.innerHTML = html;
-    updateCartSummary(subtotal);
+    setCartSummary(subtotal);
 }
 
-function updateCartSummary(subtotal) {
-    const tax = subtotal * 0.10;
-    const total = subtotal + tax;
-
-    const subtotalElement = document.getElementById('subtotal');
-    const taxElement = document.getElementById('tax');
-    const totalElement = document.getElementById('total');
-
-    if (subtotalElement) subtotalElement.textContent = `$${subtotal.toFixed(2)}`;
-    if (taxElement) taxElement.textContent = `$${tax.toFixed(2)}`;
-    if (totalElement) totalElement.textContent = `$${total.toFixed(2)}`;
+function setCartSummary(sub) {
+    const tax = sub * 0.10, total = sub + tax;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = `$${v.toFixed(2)}`; };
+    set('subtotal', sub); set('tax', tax); set('total', total);
 }
 
-// ==========================================
-// 9. CHECKOUT PAGE FUNCTIONALITY
-// ==========================================
-
+// ── CHECKOUT ──────────────────────────────────
 function initCheckoutPage() {
-    console.log('Checkout page initialized');
-    
     loadProducts().then(() => {
         loadCart();
-        
-        if (Object.keys(cart).length === 0) {
-            window.location.href = '/cart';
-            return;
-        }
-        
+        if (!Object.keys(cart).length) { window.location.href = '/cart'; return; }
         displayOrderSummary();
         initCheckoutForm();
     });
 }
 
 function displayOrderSummary() {
-    const itemsContainer = document.getElementById('order-items');
-    if (!itemsContainer) return;
-    
-    let subtotal = 0;
-    let html = '';
-
-    Object.entries(cart).forEach(([productId, quantity]) => {
-        const product = allProducts.find(p => p.id == productId);
-        if (product) {
-            const itemTotal = product.price * quantity;
-            subtotal += itemTotal;
-
-            html += `
-                <div class="order-item">
-                    <div class="order-item-name">
-                        ${escapeHtml(product.name)} × ${quantity}
-                    </div>
-                    <div>$${itemTotal.toFixed(2)}</div>
-                </div>
-            `;
-        }
+    const box = document.getElementById('order-items');
+    if (!box) return;
+    let sub = 0, html = '';
+    Object.entries(cart).forEach(([pid, qty]) => {
+        const p = allProducts.find(x => x.id == pid);
+        if (!p) return;
+        const line = p.price * qty;
+        sub += line;
+        html += `
+            <div class="order-item">
+                <div class="order-item-name">${escHtml(p.name)} × ${qty}</div>
+                <div>$${line.toFixed(2)}</div>
+            </div>`;
     });
-
-    itemsContainer.innerHTML = html;
-
-    const tax = subtotal * 0.10;
-    const total = subtotal + tax;
-
-    const summarySubtotal = document.getElementById('summary-subtotal');
-    const summaryTax = document.getElementById('summary-tax');
-    const summaryTotal = document.getElementById('summary-total');
-
-    if (summarySubtotal) summarySubtotal.textContent = `$${subtotal.toFixed(2)}`;
-    if (summaryTax) summaryTax.textContent = `$${tax.toFixed(2)}`;
-    if (summaryTotal) summaryTotal.textContent = `$${total.toFixed(2)}`;
+    box.innerHTML = html;
+    const tax = sub * 0.10, total = sub + tax;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = `$${v.toFixed(2)}`; };
+    set('summary-subtotal', sub); set('summary-tax', tax); set('summary-total', total);
 }
 
 function initCheckoutForm() {
     const form = document.getElementById('orderForm');
     if (!form) return;
-    
     form.addEventListener('submit', handleCheckout);
-    
-    const inputs = form.querySelectorAll('input, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('blur', function() {
-            validateField(this);
-        });
-    });
+    form.querySelectorAll('input').forEach(inp =>
+        inp.addEventListener('blur', () => validateField(inp)));
 }
 
-function validateField(field) {
-    if (field.hasAttribute('required') && !field.value.trim()) {
-        field.classList.add('is-invalid');
-        return false;
-    } else {
-        field.classList.remove('is-invalid');
-        field.classList.add('is-valid');
-        return true;
+function validateField(f) {
+    if (f.required && !f.value.trim()) {
+        f.classList.add('is-invalid'); f.classList.remove('is-valid'); return false;
     }
+    f.classList.remove('is-invalid'); f.classList.add('is-valid'); return true;
 }
 
 async function handleCheckout(e) {
     e.preventDefault();
-    
     const form = e.target;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    
-    const inputs = form.querySelectorAll('input[required], textarea[required]');
-    let isValid = true;
-    
-    inputs.forEach(input => {
-        if (!validateField(input)) {
-            isValid = false;
-        }
-    });
-    
-    if (!isValid) {
-        showNotification('Please fill in all required fields', 'warning');
-        return;
-    }
-    
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+    const btn  = form.querySelector('button[type="submit"]');
+    let valid  = true;
+    form.querySelectorAll('input[required]').forEach(i => { if (!validateField(i)) valid = false; });
+    if (!valid) { showNotification('Please fill in all required fields', 'warning'); return; }
 
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const phone = document.getElementById('phone').value;
-    const address = document.getElementById('address').value;
-    const city = document.getElementById('city').value;
-    const state = document.getElementById('state').value;
-    const zip = document.getElementById('zip').value;
-
-    const fullAddress = `${address}, ${city}, ${state} ${zip}`;
-    const fullName = `${firstName} ${lastName}`;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
 
     try {
-        const response = await fetch('/api/checkout', {
+        const res  = await fetch('/api/checkout', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                name: fullName,
-                address: fullAddress,
-                phone: phone
+                name:    `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`,
+                address: `${document.getElementById('address').value}, ${document.getElementById('city').value}, ${document.getElementById('state').value} ${document.getElementById('zip').value}`,
+                phone:   document.getElementById('phone').value
             })
         });
+        const data = await res.json();
 
-        const data = await response.json();
-
-        if (response.ok) {
+        if (res.ok) {
             clearCart();
-
             document.getElementById('checkout-form').style.display = 'none';
-            const successMessage = document.getElementById('success-message');
-            successMessage.classList.add('show');
-            
-            document.getElementById('order-id').textContent = `#${data.order.order_id}`;
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('order-id').textContent    = `#${data.order.order_id}`;
             document.getElementById('order-total').textContent = `$${data.order.total.toFixed(2)}`;
-
-            document.querySelectorAll('.step').forEach(step => {
-                step.classList.add('completed');
-            });
-
             window.scrollTo({ top: 0, behavior: 'smooth' });
             showConfetti();
         } else {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-            showNotification(data.error || 'Checkout failed. Please try again.', 'danger');
+            btn.disabled = false; btn.innerHTML = orig;
+            showNotification(data.error || 'Checkout failed', 'danger');
         }
-    } catch (error) {
-        console.error('Error during checkout:', error);
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-        showNotification('An error occurred during checkout', 'danger');
+    } catch {
+        btn.disabled = false; btn.innerHTML = orig;
+        showNotification('Server not reachable. Is Flask running?', 'danger');
     }
 }
 
-function selectPayment(element) {
-    document.querySelectorAll('.payment-method').forEach(pm => {
-        pm.classList.remove('selected');
-    });
-    element.classList.add('selected');
-    element.querySelector('input[type="radio"]').checked = true;
+function selectPayment(el) {
+    document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input[type="radio"]').checked = true;
 }
 
 function showConfetti() {
-    const confettiCount = 50;
-    const confettiChars = ['🎉', '🎊', '✨', '🎈', '🎁'];
-    
-    for (let i = 0; i < confettiCount; i++) {
-        setTimeout(() => {
-            const confetti = document.createElement('div');
-            confetti.textContent = confettiChars[Math.floor(Math.random() * confettiChars.length)];
-            confetti.style.cssText = `
-                position: fixed;
-                top: -50px;
-                left: ${Math.random() * 100}%;
-                font-size: ${Math.random() * 20 + 20}px;
-                z-index: 9999;
-                pointer-events: none;
-                animation: confettiFall ${Math.random() * 3 + 2}s linear forwards;
-            `;
-            document.body.appendChild(confetti);
-            
-            setTimeout(() => confetti.remove(), 5000);
-        }, i * 30);
-    }
-}
-
-if (!document.getElementById('confetti-style')) {
-    const style = document.createElement('style');
-    style.id = 'confetti-style';
-    style.textContent = `
-        @keyframes confettiFall {
-            to {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0;
-            }
+    ['🎉','🎊','✨','🎈'].forEach((ch, i) => {
+        for (let j = 0; j < 8; j++) {
+            setTimeout(() => {
+                const c = document.createElement('div');
+                c.textContent = ch;
+                c.style.cssText = `position:fixed;top:-40px;left:${Math.random()*100}%;font-size:${20+Math.random()*20}px;z-index:9999;pointer-events:none;animation:fall ${2+Math.random()*3}s linear forwards`;
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5000);
+            }, (i * 8 + j) * 80);
         }
-    `;
-    document.head.appendChild(style);
+    });
 }
 
-// ==========================================
-// 10. NOTIFICATION SYSTEM
-// ==========================================
+// ── ORDERS ────────────────────────────────────
+async function initOrdersPage() {
+    const box = document.getElementById('orders-container');
+    if (!box) return;
+    try {
+        const res    = await fetch('/api/orders');
+        const orders = await res.json();
 
-function showNotification(message, type = 'info') {
-    document.querySelectorAll('.toast-notification').forEach(n => n.remove());
-    
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show toast-notification shadow-lg`;
-    
-    const iconMap = {
-        success: 'fa-check-circle',
-        danger: 'fa-exclamation-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
-    };
-    
-    notification.innerHTML = `
-        <i class="fas ${iconMap[type] || 'fa-info-circle'} me-2"></i>
-        <span>${escapeHtml(message)}</span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 4000);
-}
+        if (!orders.length) {
+            box.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-box-open fa-5x text-muted mb-4" style="opacity:.4"></i>
+                    <h3>No orders yet</h3>
+                    <a href="/products" class="btn btn-primary btn-lg mt-3">Start Shopping</a>
+                </div>`;
+            return;
+        }
 
-// ==========================================
-// 11. UTILITY FUNCTIONS
-// ==========================================
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(amount);
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// ==========================================
-// 12. ERROR HANDLING
-// ==========================================
-
-window.addEventListener('error', function(e) {
-    console.error('Global error:', e.error);
-});
-
-window.addEventListener('unhandledrejection', function(e) {
-    console.error('Unhandled promise rejection:', e.reason);
-});
-
-// ==========================================
-// 13. KEYBOARD NAVIGATION
-// ==========================================
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const modals = document.querySelectorAll('.modal.show');
-        modals.forEach(modal => {
-            const bsModal = bootstrap.Modal.getInstance(modal);
-            if (bsModal) bsModal.hide();
-        });
+        box.innerHTML = [...orders].reverse().map(o => `
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-receipt me-2 text-primary"></i>Order #${o.order_id}
+                        </h5>
+                        <span class="badge ${orderBadge(o.status)} px-3 py-2">${o.status.toUpperCase()}</span>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p class="mb-1"><i class="fas fa-user me-2 text-muted"></i><strong>${escHtml(o.customer.name)}</strong></p>
+                            <p class="mb-1"><i class="fas fa-map-marker-alt me-2 text-muted"></i>${escHtml(o.customer.address)}</p>
+                            <p class="mb-1"><i class="fas fa-phone me-2 text-muted"></i>${escHtml(o.customer.phone)}</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <p class="text-muted mb-1">${new Date(o.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</p>
+                            <p class="fw-bold text-primary fs-4 mb-0">$${o.total.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="border-top pt-3">
+                        <div class="row g-2">
+                            ${o.items.map(item => `
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between bg-light rounded px-3 py-2">
+                                        <span>${escHtml(item.name)} <span class="text-muted">×${item.quantity}</span></span>
+                                        <strong>$${item.subtotal.toFixed(2)}</strong>
+                                    </div>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>`).join('');
+    } catch {
+        box.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-4x text-danger mb-3"></i>
+                <h3>Could not load orders</h3>
+                <p class="text-muted">Run: <code>python app.py</code></p>
+                <button class="btn btn-primary mt-2" onclick="initOrdersPage()">Retry</button>
+            </div>`;
     }
-});
+}
 
-// ==========================================
-// 14. EXPORT FOR DEBUGGING
-// ==========================================
+function orderBadge(s) {
+    return {pending:'bg-warning text-dark', completed:'bg-success', cancelled:'bg-danger', processing:'bg-info text-dark'}[s] || 'bg-secondary';
+}
 
-window.shopHub = {
-    cart,
-    allProducts,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    loadProducts,
-    searchProducts,
-    showNotification,
-    getProductImage
-};
+// ── NOTIFICATIONS ─────────────────────────────
+function showNotification(msg, type = 'info') {
+    document.querySelectorAll('.shophub-toast').forEach(n => n.remove());
+    const icons = { success:'fa-check-circle', danger:'fa-exclamation-circle', warning:'fa-exclamation-triangle', info:'fa-info-circle' };
+    const n = document.createElement('div');
+    n.className = `alert alert-${type} alert-dismissible fade show shophub-toast shadow`;
+    n.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;min-width:300px;max-width:420px;';
+    n.innerHTML = `<i class="fas ${icons[type]||'fa-info-circle'} me-2"></i>${escHtml(msg)}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(n);
+    setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 300); }, 4000);
+}
 
+// ── UTILS ─────────────────────────────────────
+function escHtml(t) {
+    if (t == null) return '';
+    const d = document.createElement('div');
+    d.textContent = String(t);
+    return d.innerHTML;
+}
 
-console.log('%c ShopHub E-Commerce Ready! ', 'background: #667eea; color: white; font-size: 16px; padding: 10px;');
-console.log('Access debugging functions via window.shopHub');
+const cs = document.createElement('style');
+cs.textContent = '@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}';
+document.head.appendChild(cs);
