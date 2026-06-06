@@ -292,9 +292,10 @@
             container.innerHTML = products.map(product => `
                 <div class="col-md-6 col-lg-4 col-xl-3">
                     <div class="product-card">
-                        <img src="https://via.placeholder.com/300x250/667eea/ffffff?text=${encodeURIComponent(product.name)}" 
-                             alt="${product.name}" 
-                             class="product-image">
+                        <img src="https://placehold.co/300x250/667eea/ffffff?text=${encodeURIComponent(product.name)}"
+                             alt="${product.name}"
+                             class="product-image"
+                             onerror="this.onerror=null; this.src='https://placehold.co/300x250/cccccc/999999?text=No+Image';">
                         <div class="product-body">
                             <h5 class="product-title">${product.name}</h5>
                             <p class="product-description">${product.description}</p>
