@@ -3,157 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShopHub - Checkout</title>
+    <title>ShopHub — Checkout</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="/"><i class="fas fa-shopping-bag"></i> ShopHub</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/cart">
-                            <i class="fas fa-shopping-cart"></i> Cart
-                            <span id="cart-count" class="badge bg-danger">0</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="/"><span style="color:var(--accent)">Shop</span>Hub</a>
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="/cart">
+                    <i class="fas fa-shopping-bag me-1"></i>Cart
+                    <span id="cart-count" class="badge">0</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
-    <section class="page-header">
-        <div class="container">
-            <h1 class="fw-bold"><i class="fas fa-credit-card me-3"></i>Checkout</h1>
-            <p class="lead mb-0">Complete your order securely</p>
-        </div>
-    </section>
+<section class="page-header">
+    <div class="container position-relative" style="z-index:1">
+        <h1><i class="fas fa-credit-card me-3" style="color:var(--accent)"></i>Checkout</h1>
+        <p class="lead">Secure & fast order placement</p>
+    </div>
+</section>
 
-    <section class="py-4">
-        <div class="container">
+<section class="py-4">
+    <div class="container">
 
-            <!-- Success Message -->
-            <div id="success-message" style="display:none;" class="text-center py-5">
-                <div style="font-size:5rem;">🎉</div>
-                <h2 class="text-success fw-bold mt-3 mb-2">Order Placed Successfully!</h2>
-                <p class="lead text-muted mb-4">Thank you for your purchase!</p>
-                <div class="card d-inline-block px-5 py-4 mb-4">
-                    <p class="mb-1 text-muted">Order ID</p>
-                    <h3 class="text-primary fw-bold" id="order-id">#0</h3>
-                    <p class="mb-1 text-muted mt-3">Total Paid</p>
-                    <h3 class="text-success fw-bold" id="order-total">$0.00</h3>
+        <!-- SUCCESS -->
+        <div id="success-message" style="display:none;">
+            <div class="success-anim">
+                <div class="success-icon-wrap">🎉</div>
+                <h2 style="font-family:'Playfair Display',serif;font-size:2.5rem;color:var(--success)">Order Confirmed!</h2>
+                <p style="color:var(--muted);font-size:1.1rem" class="mb-4">Your order has been placed successfully</p>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:inline-block;padding:2rem 4rem;margin-bottom:2rem">
+                    <p style="color:var(--muted);margin-bottom:.25rem;font-size:.85rem">ORDER ID</p>
+                    <h3 style="font-family:'Playfair Display',serif;color:var(--accent)" id="order-id">#0</h3>
+                    <p style="color:var(--muted);margin-top:1rem;margin-bottom:.25rem;font-size:.85rem">TOTAL PAID</p>
+                    <h3 style="font-family:'Playfair Display',serif;color:var(--success)" id="order-total">₹0.00</h3>
                 </div>
                 <br>
                 <div class="d-flex gap-3 justify-content-center flex-wrap">
-                    <a href="/orders" class="btn btn-primary btn-lg">
-                        <i class="fas fa-list me-2"></i>View My Orders
-                    </a>
-                    <a href="/products" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-shopping-bag me-2"></i>Continue Shopping
-                    </a>
+                    <a href="/orders" class="btn btn-primary btn-lg"><i class="fas fa-list me-2"></i>My Orders</a>
+                    <a href="/products" class="btn btn-outline-primary btn-lg"><i class="fas fa-shopping-bag me-2"></i>Continue Shopping</a>
                 </div>
             </div>
+        </div>
 
-            <!-- Checkout Form -->
-            <div id="checkout-form">
-                <div class="row g-4">
-                    <div class="col-lg-7">
-                        <div class="checkout-card">
-                            <h4><i class="fas fa-truck me-2 text-primary"></i>Shipping Details</h4>
-                            <form id="orderForm" novalidate>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold">First Name *</label>
-                                        <input type="text" id="firstName" class="form-control" placeholder="John" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold">Last Name *</label>
-                                        <input type="text" id="lastName" class="form-control" placeholder="Doe" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold">Phone Number *</label>
-                                        <input type="tel" id="phone" class="form-control" placeholder="+1 555 123 4567" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold">Street Address *</label>
-                                        <input type="text" id="address" class="form-control" placeholder="123 Main Street" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label fw-semibold">City *</label>
-                                        <input type="text" id="city" class="form-control" placeholder="New York" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-semibold">State *</label>
-                                        <input type="text" id="state" class="form-control" placeholder="NY" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-semibold">ZIP *</label>
-                                        <input type="text" id="zip" class="form-control" placeholder="10001" required>
-                                        <div class="invalid-feedback">Required</div>
-                                    </div>
+        <!-- FORM -->
+        <div id="checkout-form">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="checkout-card">
+                        <h4><i class="fas fa-truck me-2" style="color:var(--accent)"></i>Shipping Details</h4>
+                        <form id="orderForm" novalidate>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">First Name *</label>
+                                    <input type="text" id="firstName" class="form-control" placeholder="Arjun" required>
+                                    <div class="invalid-feedback">Required</div>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Last Name *</label>
+                                    <input type="text" id="lastName" class="form-control" placeholder="Sharma" required>
+                                    <div class="invalid-feedback">Required</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Phone Number *</label>
+                                    <input type="tel" id="phone" class="form-control" placeholder="+91 98765 43210" required>
+                                    <div class="invalid-feedback">Required</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Street Address *</label>
+                                    <input type="text" id="address" class="form-control" placeholder="123 MG Road, Flat 4B" required>
+                                    <div class="invalid-feedback">Required</div>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">City *</label>
+                                    <input type="text" id="city" class="form-control" placeholder="Mumbai" required>
+                                    <div class="invalid-feedback">Required</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">State *</label>
+                                    <input type="text" id="state" class="form-control" placeholder="Maharashtra" required>
+                                    <div class="invalid-feedback">Required</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">PIN Code *</label>
+                                    <input type="text" id="zip" class="form-control" placeholder="400001" required>
+                                    <div class="invalid-feedback">Required</div>
+                                </div>
+                            </div>
 
-                                <h5 class="mt-4 mb-3"><i class="fas fa-credit-card me-2 text-primary"></i>Payment Method</h5>
-                                <div class="payment-method selected" onclick="selectPayment(this)">
-                                    <input type="radio" name="payment" value="cod" checked>
-                                    <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                            <h5 class="mt-4 mb-3" style="font-family:'Playfair Display',serif;color:var(--white)">
+                                <i class="fas fa-credit-card me-2" style="color:var(--accent)"></i>Payment
+                            </h5>
+                            <div class="payment-method selected" onclick="selectPayment(this)">
+                                <input type="radio" name="payment" value="cod" checked>
+                                <i class="fas fa-money-bill-wave" style="color:var(--success)"></i>
+                                <div>
                                     <strong>Cash on Delivery</strong>
-                                    <small class="text-muted ms-2">Pay when you receive</small>
+                                    <div style="font-size:.8rem;color:var(--muted)">Pay when you receive</div>
                                 </div>
-                                <div class="payment-method" onclick="selectPayment(this)">
-                                    <input type="radio" name="payment" value="card">
-                                    <i class="fas fa-credit-card me-2 text-primary"></i>
+                            </div>
+                            <div class="payment-method" onclick="selectPayment(this)">
+                                <input type="radio" name="payment" value="upi">
+                                <i class="fas fa-mobile-alt" style="color:var(--accent)"></i>
+                                <div>
+                                    <strong>UPI / GPay / PhonePe</strong>
+                                    <div style="font-size:.8rem;color:var(--muted)">Coming soon</div>
+                                </div>
+                            </div>
+                            <div class="payment-method" onclick="selectPayment(this)">
+                                <input type="radio" name="payment" value="card">
+                                <i class="fas fa-credit-card" style="color:var(--accent2)"></i>
+                                <div>
                                     <strong>Credit / Debit Card</strong>
-                                    <small class="text-muted ms-2">Coming soon</small>
+                                    <div style="font-size:.8rem;color:var(--muted)">Coming soon</div>
                                 </div>
+                            </div>
 
-                                <button type="submit" class="btn btn-primary w-100 btn-lg mt-4">
-                                    <i class="fas fa-check-circle me-2"></i>Place Order
-                                </button>
-                            </form>
-                        </div>
+                            <button type="submit" class="btn btn-primary w-100 btn-lg mt-4" style="padding:1rem">
+                                <i class="fas fa-check-circle me-2"></i>Place Order
+                            </button>
+                        </form>
                     </div>
+                </div>
 
-                    <div class="col-lg-5">
-                        <div class="order-summary">
-                            <h4><i class="fas fa-receipt me-2 text-primary"></i>Order Summary</h4>
-                            <div id="order-items">
-                                <div class="text-center py-3">
-                                    <div class="spinner-border spinner-border-sm text-primary"></div>
-                                    <span class="ms-2 text-muted">Loading...</span>
-                                </div>
+                <div class="col-lg-5">
+                    <div class="order-summary">
+                        <h4><i class="fas fa-receipt me-2" style="color:var(--accent)"></i>Order Summary</h4>
+                        <div id="order-items">
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm"></div>
+                                <span class="ms-2" style="color:var(--muted)">Loading...</span>
                             </div>
-                            <div class="order-total mt-3">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Subtotal</span>
-                                    <span id="summary-subtotal">$0.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span class="text-muted">Tax (10%)</span>
-                                    <span id="summary-tax">$0.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <strong style="font-size:1.3rem;">Total</strong>
-                                    <strong style="font-size:1.3rem;color:var(--primary-color);" id="summary-total">$0.00</strong>
-                                </div>
+                        </div>
+                        <div class="order-total">
+                            <div class="d-flex justify-content-between mb-2" style="color:var(--muted);font-size:.9rem">
+                                <span>Subtotal</span><span id="summary-subtotal">₹0.00</span>
                             </div>
+                            <div class="d-flex justify-content-between mb-3" style="color:var(--muted);font-size:.9rem">
+                                <span>GST (18%)</span><span id="summary-tax">₹0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between" style="font-size:1.3rem;font-family:'Playfair Display',serif;font-weight:700;color:var(--accent)">
+                                <span>Total</span><span id="summary-total">₹0.00</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <small style="color:var(--muted)">
+                                <i class="fas fa-shield-halved me-1" style="color:var(--success)"></i>
+                                256-bit SSL encryption
+                            </small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/script.js"></script>
 </body>
 </html>

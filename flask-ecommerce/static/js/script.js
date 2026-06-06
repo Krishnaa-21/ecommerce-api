@@ -2,6 +2,12 @@ let allProducts = [];
 let cart = {};
 let currentPage = 'home';
 
+// ── CURRENCY: INR ──────────────────────────────
+function formatINR(amount) {
+    return '₹' + amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ── INIT ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
     detectCurrentPage();
     initializePage();
@@ -29,17 +35,18 @@ function initializePage() {
     }
 }
 
+// ── NAVBAR ─────────────────────────────────────
 function initNavbarScroll() {
-    const navbar = document.querySelector('.navbar');
-    if (navbar) window.addEventListener('scroll', () =>
-        navbar.classList.toggle('scrolled', window.scrollY > 50));
+    const nav = document.querySelector('.navbar');
+    if (nav) window.addEventListener('scroll', () =>
+        nav.classList.toggle('scrolled', window.scrollY > 50));
 }
 
 function initSmoothScroll() {
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
-            if (href !== '#') {
+            if (href && href !== '#') {
                 e.preventDefault();
                 const t = document.querySelector(href);
                 if (t) t.scrollIntoView({ behavior: 'smooth' });
@@ -48,7 +55,7 @@ function initSmoothScroll() {
     });
 }
 
-// ── CART ──────────────────────────────────────
+// ── CART STORAGE ───────────────────────────────
 function loadCart() {
     try { cart = JSON.parse(sessionStorage.getItem('cart') || '{}'); }
     catch { cart = {}; }
@@ -66,6 +73,7 @@ function updateCartCount() {
     if (el) el.textContent = count;
 }
 
+// ── ADD TO CART ────────────────────────────────
 async function addToCart(productId, productName) {
     try {
         const res = await fetch('/api/cart/add', {
@@ -125,7 +133,7 @@ function clearCart() {
     if (currentPage === 'cart') displayCart();
 }
 
-// ── HOME ──────────────────────────────────────
+// ── HOME ────────────────────────────────────────
 function initHomePage() {
     const statNums = document.querySelectorAll('.stat-number');
     if (!statNums.length) return;
@@ -133,7 +141,8 @@ function initHomePage() {
         entries.forEach(e => {
             if (e.isIntersecting) {
                 const el = e.target;
-                const num = parseInt(el.textContent.replace(/\D/g, ''));
+                const raw = el.textContent.replace(/\D/g, '');
+                const num = parseInt(raw);
                 const suffix = el.textContent.includes('%') ? '%' : '+';
                 if (num) animateValue(el, 0, num, 1800, suffix);
                 obs.unobserve(el);
@@ -153,7 +162,7 @@ function animateValue(el, start, end, duration, suffix = '+') {
     }, 16);
 }
 
-// ── PRODUCTS ──────────────────────────────────
+// ── PRODUCTS ────────────────────────────────────
 function initProductsPage() {
     loadProducts();
     const inp = document.getElementById('searchInput');
@@ -172,7 +181,7 @@ function initProductsPage() {
 async function loadProducts() {
     try {
         const res = await fetch('/api/products');
-        if (!res.ok) throw new Error();
+        if (!res.ok) throw new Error('fetch failed');
         allProducts = await res.json();
         displayProducts(allProducts);
     } catch {
@@ -190,8 +199,9 @@ function displayProducts(products) {
         container.innerHTML = `
             <div class="col-12">
                 <div class="no-products">
-                    <i class="fas fa-box-open fa-5x text-muted mb-4"></i>
+                    <i class="fas fa-box-open fa-4x mb-4"></i>
                     <h3>No products found</h3>
+                    <p style="color:var(--muted)">Try a different search term</p>
                     <button class="btn btn-primary mt-3" onclick="clearSearch()">Show All</button>
                 </div>
             </div>`;
@@ -201,26 +211,30 @@ function displayProducts(products) {
 
     if (countEl) countEl.textContent = `${products.length} product${products.length !== 1 ? 's' : ''} found`;
 
+    // FIX: use product.image from products.json + INR prices
     container.innerHTML = products.map(p => `
         <div class="col-md-6 col-lg-4 col-xl-3 fade-in">
             <div class="product-card">
-                <img src="${escHtml(p.image || '')}"
-                     alt="${escHtml(p.name)}"
-                     class="product-image"
-                     onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300/667eea/ffffff?text=${encodeURIComponent(p.name)}'">
+                <div style="overflow:hidden;">
+                    <img src="${escHtml(p.image || '')}"
+                         alt="${escHtml(p.name)}"
+                         class="product-image"
+                         onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300/1a1a2e/e94560?text=${encodeURIComponent(p.name)}'">
+                </div>
                 <div class="product-body">
-                    <h5 class="product-title">${escHtml(p.name)}</h5>
+                    <span style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">${escHtml(p.category || 'general')}</span>
+                    <h5 class="product-title mt-1">${escHtml(p.name)}</h5>
                     <p class="product-description">${escHtml(p.description)}</p>
                     <div class="product-footer">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="product-price">$${p.price.toFixed(2)}</span>
+                            <span class="product-price">${formatINR(p.price * 83)}</span>
                             <span class="badge ${stockClass(p.stock)} stock-badge">${stockText(p.stock)}</span>
                         </div>
-                        <button class="btn btn-primary btn-add-cart"
+                        <button class="btn btn-add-cart"
                                 data-pid="${p.id}"
                                 onclick="addToCart(${p.id}, '${escHtml(p.name)}')"
                                 ${p.stock === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-cart-plus me-2"></i>${p.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                            <i class="fas fa-bag-shopping me-2"></i>${p.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                         </button>
                     </div>
                 </div>
@@ -251,14 +265,18 @@ function showError() {
     const c = document.getElementById('products-container');
     if (c) c.innerHTML = `
         <div class="col-12 text-center py-5">
-            <i class="fas fa-exclamation-triangle fa-5x text-danger mb-4"></i>
+            <i class="fas fa-exclamation-triangle fa-4x mb-4" style="color:var(--accent)"></i>
             <h3>Could not load products</h3>
-            <p class="text-muted">Run: <code>python app.py</code> in the flask-ecommerce folder</p>
-            <button class="btn btn-primary mt-3" onclick="loadProducts()">Retry</button>
+            <p style="color:var(--muted)">Run: <code>python app.py</code> in the flask-ecommerce folder</p>
+            <button class="btn btn-primary mt-3" onclick="loadProducts()">
+                <i class="fas fa-redo me-2"></i>Retry
+            </button>
         </div>`;
 }
 
-// ── CART PAGE ─────────────────────────────────
+// ── CART PAGE ───────────────────────────────────
+// FIX: was calling loadProducts then displayCart but allProducts was empty
+// because loadProducts is async — must await it
 function initCartPage() {
     loadProducts().then(() => displayCart());
 }
@@ -272,10 +290,12 @@ function displayCart() {
     if (!Object.keys(cart).length) {
         container.innerHTML = `
             <div class="text-center py-5">
-                <i class="fas fa-shopping-cart fa-5x text-muted mb-4" style="opacity:.4"></i>
-                <h3>Your cart is empty</h3>
-                <p class="text-muted mb-4">Add some products to get started!</p>
-                <a href="/products" class="btn btn-primary btn-lg">Browse Products</a>
+                <i class="fas fa-shopping-cart fa-4x mb-4" style="color:var(--muted);opacity:.4"></i>
+                <h3 style="font-family:'Playfair Display',serif">Your cart is empty</h3>
+                <p style="color:var(--muted)" class="mb-4">Add some products to get started!</p>
+                <a href="/products" class="btn btn-primary btn-lg">
+                    <i class="fas fa-shopping-bag me-2"></i>Browse Products
+                </a>
             </div>`;
         if (checkoutBtn) checkoutBtn.style.display = 'none';
         setCartSummary(0);
@@ -289,18 +309,20 @@ function displayCart() {
     Object.entries(cart).forEach(([pid, qty]) => {
         const p = allProducts.find(x => x.id == pid);
         if (!p) return;
-        const line = p.price * qty;
+        // FIX: convert to INR
+        const priceINR = p.price * 83;
+        const line = priceINR * qty;
         subtotal += line;
         html += `
             <div class="cart-item">
                 <img src="${escHtml(p.image || '')}"
                      alt="${escHtml(p.name)}"
                      class="cart-item-image"
-                     onerror="this.onerror=null;this.src='https://via.placeholder.com/100/667eea/ffffff?text=${encodeURIComponent(p.name.slice(0,2))}'">
+                     onerror="this.onerror=null;this.src='https://via.placeholder.com/90/1a1a2e/e94560?text=${encodeURIComponent(p.name.slice(0,2))}'">
                 <div class="cart-item-details">
                     <div class="cart-item-title">${escHtml(p.name)}</div>
-                    <div class="text-muted small">${escHtml(p.description)}</div>
-                    <div class="cart-item-price mt-1">$${p.price.toFixed(2)}</div>
+                    <div class="small mb-1" style="color:var(--muted)">${escHtml(p.description)}</div>
+                    <div class="cart-item-price">${formatINR(priceINR)}</div>
                 </div>
                 <div class="quantity-control">
                     <button class="quantity-btn" onclick="updateQuantity(${pid}, ${qty - 1})">
@@ -312,9 +334,13 @@ function displayCart() {
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
-                <div class="ms-3"><strong>$${line.toFixed(2)}</strong></div>
-                <div class="ms-3">
-                    <i class="fas fa-trash-alt fa-lg remove-btn" onclick="removeFromCart(${pid})"></i>
+                <div style="min-width:90px;text-align:right;">
+                    <strong style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--white)">${formatINR(line)}</strong>
+                </div>
+                <div>
+                    <span class="remove-btn" onclick="removeFromCart(${pid})">
+                        <i class="fas fa-trash-alt"></i>
+                    </span>
                 </div>
             </div>`;
     });
@@ -324,12 +350,15 @@ function displayCart() {
 }
 
 function setCartSummary(sub) {
-    const tax = sub * 0.10, total = sub + tax;
-    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = `$${v.toFixed(2)}`; };
-    set('subtotal', sub); set('tax', tax); set('total', total);
+    const tax = sub * 0.18; // GST 18%
+    const total = sub + tax;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = formatINR(v); };
+    set('subtotal', sub);
+    set('tax', tax);
+    set('total', total);
 }
 
-// ── CHECKOUT ──────────────────────────────────
+// ── CHECKOUT ────────────────────────────────────
 function initCheckoutPage() {
     loadProducts().then(() => {
         loadCart();
@@ -346,18 +375,22 @@ function displayOrderSummary() {
     Object.entries(cart).forEach(([pid, qty]) => {
         const p = allProducts.find(x => x.id == pid);
         if (!p) return;
-        const line = p.price * qty;
+        const priceINR = p.price * 83;
+        const line = priceINR * qty;
         sub += line;
         html += `
             <div class="order-item">
-                <div class="order-item-name">${escHtml(p.name)} × ${qty}</div>
-                <div>$${line.toFixed(2)}</div>
+                <div class="order-item-name">${escHtml(p.name)} <span style="color:var(--muted)">×${qty}</span></div>
+                <div style="color:var(--white);font-weight:600">${formatINR(line)}</div>
             </div>`;
     });
     box.innerHTML = html;
-    const tax = sub * 0.10, total = sub + tax;
-    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = `$${v.toFixed(2)}`; };
-    set('summary-subtotal', sub); set('summary-tax', tax); set('summary-total', total);
+    const tax = sub * 0.18;
+    const total = sub + tax;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = formatINR(v); };
+    set('summary-subtotal', sub);
+    set('summary-tax', tax);
+    set('summary-total', total);
 }
 
 function initCheckoutForm() {
@@ -388,7 +421,7 @@ async function handleCheckout(e) {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
 
     try {
-        const res  = await fetch('/api/checkout', {
+        const res = await fetch('/api/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -404,7 +437,7 @@ async function handleCheckout(e) {
             document.getElementById('checkout-form').style.display = 'none';
             document.getElementById('success-message').style.display = 'block';
             document.getElementById('order-id').textContent    = `#${data.order.order_id}`;
-            document.getElementById('order-total').textContent = `$${data.order.total.toFixed(2)}`;
+            document.getElementById('order-total').textContent = formatINR(data.order.total * 83);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             showConfetti();
         } else {
@@ -424,7 +457,7 @@ function selectPayment(el) {
 }
 
 function showConfetti() {
-    ['🎉','🎊','✨','🎈'].forEach((ch, i) => {
+    ['🎉','🎊','✨','🎈','🎁'].forEach((ch, i) => {
         for (let j = 0; j < 8; j++) {
             setTimeout(() => {
                 const c = document.createElement('div');
@@ -437,86 +470,119 @@ function showConfetti() {
     });
 }
 
-// ── ORDERS ────────────────────────────────────
+// ── ORDERS PAGE ─────────────────────────────────
+// FIX: was not being called on page load — initOrdersPage must run automatically
 async function initOrdersPage() {
     const box = document.getElementById('orders-container');
     if (!box) return;
+
+    // show loading first
+    box.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border" style="width:3rem;height:3rem;"></div>
+            <p class="mt-3" style="color:var(--muted)">Loading orders...</p>
+        </div>`;
+
     try {
         const res    = await fetch('/api/orders');
+        if (!res.ok) throw new Error('fetch failed');
         const orders = await res.json();
 
         if (!orders.length) {
             box.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="fas fa-box-open fa-5x text-muted mb-4" style="opacity:.4"></i>
-                    <h3>No orders yet</h3>
-                    <a href="/products" class="btn btn-primary btn-lg mt-3">Start Shopping</a>
+                    <i class="fas fa-box-open fa-4x mb-4" style="color:var(--muted);opacity:.4"></i>
+                    <h3 style="font-family:'Playfair Display',serif">No orders yet</h3>
+                    <p style="color:var(--muted)" class="mb-4">You haven't placed any orders yet</p>
+                    <a href="/products" class="btn btn-primary btn-lg">
+                        <i class="fas fa-shopping-bag me-2"></i>Start Shopping
+                    </a>
                 </div>`;
             return;
         }
 
         box.innerHTML = [...orders].reverse().map(o => `
-            <div class="card mb-4 shadow-sm">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-receipt me-2 text-primary"></i>Order #${o.order_id}
-                        </h5>
-                        <span class="badge ${orderBadge(o.status)} px-3 py-2">${o.status.toUpperCase()}</span>
+            <div class="order-card">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h5 class="mb-0 fw-bold" style="font-family:'Playfair Display',serif">
+                        <i class="fas fa-receipt me-2" style="color:var(--accent)"></i>Order #${o.order_id}
+                    </h5>
+                    <span class="badge ${orderBadge(o.status)}">${o.status.toUpperCase()}</span>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1" style="color:var(--muted);font-size:.9rem">
+                            <i class="fas fa-user me-2"></i><strong style="color:var(--white)">${escHtml(o.customer.name)}</strong>
+                        </p>
+                        <p class="mb-1" style="color:var(--muted);font-size:.9rem">
+                            <i class="fas fa-map-marker-alt me-2"></i>${escHtml(o.customer.address)}
+                        </p>
+                        <p class="mb-0" style="color:var(--muted);font-size:.9rem">
+                            <i class="fas fa-phone me-2"></i>${escHtml(o.customer.phone)}
+                        </p>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-1"><i class="fas fa-user me-2 text-muted"></i><strong>${escHtml(o.customer.name)}</strong></p>
-                            <p class="mb-1"><i class="fas fa-map-marker-alt me-2 text-muted"></i>${escHtml(o.customer.address)}</p>
-                            <p class="mb-1"><i class="fas fa-phone me-2 text-muted"></i>${escHtml(o.customer.phone)}</p>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <p class="text-muted mb-1">${new Date(o.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</p>
-                            <p class="fw-bold text-primary fs-4 mb-0">$${o.total.toFixed(2)}</p>
-                        </div>
+                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <p class="mb-1" style="color:var(--muted);font-size:.85rem">
+                            <i class="fas fa-calendar me-2"></i>${new Date(o.created_at).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'})}
+                        </p>
+                        <p class="mb-0" style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--accent);font-weight:700">
+                            ${formatINR(o.total * 83)}
+                        </p>
                     </div>
-                    <div class="border-top pt-3">
-                        <div class="row g-2">
-                            ${o.items.map(item => `
-                                <div class="col-md-6">
-                                    <div class="d-flex justify-content-between bg-light rounded px-3 py-2">
-                                        <span>${escHtml(item.name)} <span class="text-muted">×${item.quantity}</span></span>
-                                        <strong>$${item.subtotal.toFixed(2)}</strong>
-                                    </div>
-                                </div>`).join('')}
-                        </div>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:1rem;">
+                    <div class="row g-2">
+                        ${o.items.map(item => `
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between align-items-center px-3 py-2"
+                                     style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">
+                                    <span style="color:var(--muted);font-size:.9rem">
+                                        ${escHtml(item.name)}
+                                        <span style="color:var(--accent)">×${item.quantity}</span>
+                                    </span>
+                                    <strong style="color:var(--white)">${formatINR(item.subtotal * 83)}</strong>
+                                </div>
+                            </div>`).join('')}
                     </div>
                 </div>
             </div>`).join('');
-    } catch {
+    } catch (err) {
+        console.error('Orders fetch error:', err);
         box.innerHTML = `
             <div class="text-center py-5">
-                <i class="fas fa-exclamation-triangle fa-4x text-danger mb-3"></i>
-                <h3>Could not load orders</h3>
-                <p class="text-muted">Run: <code>python app.py</code></p>
-                <button class="btn btn-primary mt-2" onclick="initOrdersPage()">Retry</button>
+                <i class="fas fa-exclamation-triangle fa-4x mb-3" style="color:var(--accent)"></i>
+                <h3 style="font-family:'Playfair Display',serif">Could not load orders</h3>
+                <p style="color:var(--muted)">Make sure Flask is running: <code>python app.py</code></p>
+                <button class="btn btn-primary mt-3" onclick="initOrdersPage()">
+                    <i class="fas fa-redo me-2"></i>Retry
+                </button>
             </div>`;
     }
 }
 
 function orderBadge(s) {
-    return {pending:'bg-warning text-dark', completed:'bg-success', cancelled:'bg-danger', processing:'bg-info text-dark'}[s] || 'bg-secondary';
+    return {
+        pending:    'bg-warning',
+        completed:  'bg-success',
+        cancelled:  'bg-danger',
+        processing: 'bg-info'
+    }[s] || 'bg-secondary';
 }
 
-// ── NOTIFICATIONS ─────────────────────────────
+// ── NOTIFICATIONS ───────────────────────────────
 function showNotification(msg, type = 'info') {
     document.querySelectorAll('.shophub-toast').forEach(n => n.remove());
     const icons = { success:'fa-check-circle', danger:'fa-exclamation-circle', warning:'fa-exclamation-triangle', info:'fa-info-circle' };
     const n = document.createElement('div');
     n.className = `alert alert-${type} alert-dismissible fade show shophub-toast shadow`;
-    n.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;min-width:300px;max-width:420px;';
+    n.style.cssText = 'position:fixed;top:85px;right:20px;z-index:9999;min-width:300px;max-width:420px;';
     n.innerHTML = `<i class="fas ${icons[type]||'fa-info-circle'} me-2"></i>${escHtml(msg)}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
     document.body.appendChild(n);
     setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 300); }, 4000);
 }
 
-// ── UTILS ─────────────────────────────────────
+// ── UTILS ───────────────────────────────────────
 function escHtml(t) {
     if (t == null) return '';
     const d = document.createElement('div');
@@ -524,6 +590,10 @@ function escHtml(t) {
     return d.innerHTML;
 }
 
+// Confetti animation
 const cs = document.createElement('style');
 cs.textContent = '@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}';
 document.head.appendChild(cs);
+
+window.shopHub = { addToCart, removeFromCart, clearCart, loadProducts, showNotification };
+console.log('ShopHub ready 🚀');
