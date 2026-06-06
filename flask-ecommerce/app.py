@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session, render_template
+from flask import Flask, request, jsonify, render_template
 import os
 import json
 from datetime import datetime
@@ -8,107 +8,66 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
 PRODUCTS_FILE = "products.json"
-ORDERS_FILE = "orders.json"
+ORDERS_FILE   = "orders.json"
 
-# -------------------------
-# Utility Functions
-# -------------------------
+# ─────────────────────────────────────────────
+#  Utility helpers
+# ─────────────────────────────────────────────
 
-def read_json(file_path):
-    """Read JSON file and return data"""
-    if not os.path.exists(file_path):
-        with open(file_path, "w") as f:
+def read_json(path):
+    if not os.path.exists(path):
+        with open(path, "w") as f:
             json.dump([], f)
-    with open(file_path, "r") as f:
+    with open(path, "r") as f:
         return json.load(f)
 
-def write_json(file_path, data):
-    """Write data to JSON file"""
-    with open(file_path, "w") as f:
-        json.dump(data, f, indent=4)
+def write_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4, default=str)
 
 def get_product_by_id(product_id):
-    """Get product by ID"""
-    products = read_json(PRODUCTS_FILE)
-    for product in products:
-        if product["id"] == product_id:
-            return product
+    for p in read_json(PRODUCTS_FILE):
+        if p["id"] == int(product_id):
+            return p
     return None
 
-def initialize_cart():
-    """Initialize cart in session"""
-    if "cart" not in session:
-        session["cart"] = {}
-
-def get_cart_total():
-    """Calculate cart total"""
-    initialize_cart()
-    cart = session["cart"]
-    total = 0
-    for product_id, qty in cart.items():
-        product = get_product_by_id(int(product_id))
-        if product:
-            total += product["price"] * qty
-    return total
-
-def get_cart_count():
-    """Get total items in cart"""
-    initialize_cart()
-    return sum(session["cart"].values())
-
-# -------------------------
-# HTML Template Routes (Pages)
-# -------------------------
+# ─────────────────────────────────────────────
+#  HTML page routes
+# ─────────────────────────────────────────────
 
 @app.route("/")
 def home():
-    """Render home page"""
     return render_template("home.html")
 
 @app.route("/products")
 def products_page():
-    """Render products page"""
     return render_template("products.html")
 
 @app.route("/cart")
 def cart_page():
-    """Render cart page"""
     return render_template("cart.html")
 
 @app.route("/checkout")
 def checkout_page():
-    """Render checkout page"""
-    initialize_cart()
-    if not session["cart"]:
-        return render_template("cart.html")
+    # FIX: removed server-side session cart check — cart lives in JS sessionStorage.
+    # The old code redirected to cart.html when Flask session cart was empty,
+    # which broke checkout after a server restart (session lost, but JS cart intact).
     return render_template("checkout.html")
 
 @app.route("/orders")
 def orders_page():
-    """Render orders page"""
-    if os.path.exists("templates/orders.html"):
-        return render_template("orders.html")
-    else:
-        return jsonify(read_json(ORDERS_FILE))
+    return render_template("orders.html")
 
-@app.route("/test-images")
-def test_images():
-    """Test images page"""
-    return render_template("test_images.html")
-
-# -------------------------
-# API Routes (JSON Data)
-# -------------------------
+# ─────────────────────────────────────────────
+#  Products API
+# ─────────────────────────────────────────────
 
 @app.route("/api/products", methods=["GET"])
 def api_get_products():
-    """API: Get all products"""
-    products = read_json(PRODUCTS_FILE)
-    return jsonify(products)
+    return jsonify(read_json(PRODUCTS_FILE))
 
 @app.route("/api/product/<int:product_id>", methods=["GET"])
 def api_product_detail(product_id):
-    """API: Get product by ID"""
     product = get_product_by_id(product_id)
     if not product:
         return jsonify({"error": "Product not found"}), 404
@@ -116,390 +75,221 @@ def api_product_detail(product_id):
 
 @app.route("/api/search", methods=["GET"])
 def api_search_products():
-    """API: Search products"""
-    query = request.args.get("q", "").lower()
+    q = request.args.get("q", "").lower().strip()
     products = read_json(PRODUCTS_FILE)
+    if not q:
+        return jsonify(products)
     results = [
-        product for product in products
-        if query in product["name"].lower() or query in product.get("description", "").lower()
+        p for p in products
+        if q in p["name"].lower()
+        or q in p.get("description", "").lower()
+        or q in p.get("category", "").lower()
     ]
     return jsonify(results)
 
-@app.route("/api/cart", methods=["GET"])
-def api_view_cart():
-    """API: View cart"""
-    initialize_cart()
-    cart = session["cart"]
-    cart_items = []
-    total = 0
-
-    for product_id, qty in cart.items():
-        product = get_product_by_id(int(product_id))
-        if product:
-            subtotal = product["price"] * qty
-            total += subtotal
-            cart_items.append({
-                "product": product,
-                "quantity": qty,
-                "subtotal": subtotal
-            })
-
-    return jsonify({
-        "cart": cart_items,
-        "total": total,
-        "count": get_cart_count()
-    })
+# ─────────────────────────────────────────────
+#  Cart API  (thin — cart state is owned by JS sessionStorage)
+# ─────────────────────────────────────────────
 
 @app.route("/api/cart/add", methods=["POST"])
 def api_add_to_cart():
-    """API: Add to cart"""
-    initialize_cart()
-    data = request.json
+    """
+    FIX: Previously used Flask session as the cart store, but the JS also
+    maintained its own sessionStorage cart. They drifted on server restarts.
+    This endpoint now only validates stock and returns success/error.
+    The JS is the single source of truth for cart contents.
+    """
+    data = request.get_json(force=True) or {}
     product_id = data.get("product_id")
-    quantity = data.get("quantity", 1)
-    product = get_product_by_id(product_id)
+    quantity   = int(data.get("quantity", 1))
 
+    if not product_id:
+        return jsonify({"error": "product_id required"}), 400
+
+    product = get_product_by_id(product_id)
     if not product:
         return jsonify({"error": "Product not found"}), 404
     if quantity <= 0:
         return jsonify({"error": "Invalid quantity"}), 400
 
-    cart = session["cart"]
-    product_key = str(product_id)
-    current_quantity = cart.get(product_key, 0)
-
-    if product["stock"] < (current_quantity + quantity):
-        return jsonify({"error": "Not enough stock"}), 400
-
-    if product_key in cart:
-        cart[product_key] += quantity
-    else:
-        cart[product_key] = quantity
-
-    session["cart"] = cart
-    session.modified = True
+    # Pass current cart quantity so we can check total-against-stock
+    current_in_cart = int(data.get("current_cart_qty", 0))
+    if product["stock"] < (current_in_cart + quantity):
+        return jsonify({"error": f"Only {product['stock']} in stock"}), 400
 
     return jsonify({
         "message": "Product added to cart",
-        "cart_count": get_cart_count()
+        "product": product
     })
 
-@app.route("/api/cart/update", methods=["PUT"])
-def api_update_cart():
-    """API: Update cart quantity"""
-    initialize_cart()
-    data = request.json
-    product_id = str(data.get("product_id"))
-    quantity = data.get("quantity", 1)
-
-    if quantity <= 0:
-        return jsonify({"error": "Invalid quantity"}), 400
-
-    product = get_product_by_id(int(product_id))
-    if not product:
-        return jsonify({"error": "Product not found"}), 404
-    if product["stock"] < quantity:
-        return jsonify({"error": "Not enough stock"}), 400
-
-    cart = session["cart"]
-    cart[product_id] = quantity
-    session["cart"] = cart
-    session.modified = True
-
-    return jsonify({
-        "message": "Cart updated",
-        "cart_count": get_cart_count()
-    })
-
-@app.route("/api/cart/remove", methods=["DELETE"])
-def api_remove_from_cart():
-    """API: Remove from cart"""
-    initialize_cart()
-    data = request.json
-    product_id = str(data.get("product_id"))
-    cart = session["cart"]
-
-    if product_id in cart:
-        del cart[product_id]
-        session["cart"] = cart
-        session.modified = True
-        return jsonify({
-            "message": "Product removed from cart",
-            "cart_count": get_cart_count()
-        })
-
-    return jsonify({"error": "Product not in cart"}), 404
-
-@app.route("/api/cart/clear", methods=["DELETE"])
-def api_clear_cart():
-    """API: Clear cart"""
-    session["cart"] = {}
-    session.modified = True
-    return jsonify({
-        "message": "Cart cleared",
-        "cart_count": 0
-    })
+# ─────────────────────────────────────────────
+#  Checkout API
+# ─────────────────────────────────────────────
 
 @app.route("/api/checkout", methods=["POST"])
 def api_checkout():
-    """API: Checkout"""
-    initialize_cart()
-    data = request.json
-    customer_name = data.get("name")
-    address = data.get("address")
-    phone = data.get("phone")
+    """
+    FIX: Old code read cart from Flask session, which was empty after
+    server restarts. Now the JS sends the full cart in the request body,
+    so checkout works regardless of server state.
+    """
+    data = request.get_json(force=True) or {}
 
-    if not customer_name or not address or not phone:
+    name    = (data.get("name")    or "").strip()
+    address = (data.get("address") or "").strip()
+    phone   = (data.get("phone")   or "").strip()
+    # JS sends the cart: { "cart": { "1": 2, "5": 1 } }
+    cart    = data.get("cart", {})
+
+    if not name or not address or not phone:
         return jsonify({"error": "Missing customer details"}), 400
-
-    cart = session["cart"]
     if not cart:
         return jsonify({"error": "Cart is empty"}), 400
 
-    products = read_json(PRODUCTS_FILE)
-    orders = read_json(ORDERS_FILE)
+    products   = read_json(PRODUCTS_FILE)
+    orders     = read_json(ORDERS_FILE)
     order_items = []
-    total = 0
+    total       = 0.0
 
-    for product_id, qty in cart.items():
-        product = get_product_by_id(int(product_id))
+    # Map products by id for quick lookup
+    prod_map = {str(p["id"]): p for p in products}
+
+    for pid_str, qty in cart.items():
+        qty = int(qty)
+        product = prod_map.get(str(pid_str))
         if not product:
-            continue
+            return jsonify({"error": f"Product {pid_str} not found"}), 404
         if qty > product["stock"]:
-            return jsonify({
-                "error": f"Insufficient stock for {product['name']}"
-            }), 400
+            return jsonify({"error": f"Not enough stock for {product['name']}"}), 400
 
-        subtotal = product["price"] * qty
-        total += subtotal
-
-        for p in products:
-            if p["id"] == product["id"]:
-                p["stock"] -= qty
-                break
+        subtotal = round(product["price"] * qty, 2)
+        total   += subtotal
+        product["stock"] -= qty
 
         order_items.append({
             "product_id": product["id"],
-            "name": product["name"],
-            "quantity": qty,
-            "price": product["price"],
-            "subtotal": subtotal
+            "name":       product["name"],
+            "quantity":   qty,
+            "price":      product["price"],
+            "subtotal":   subtotal
         })
+
+    total = round(total, 2)
 
     write_json(PRODUCTS_FILE, products)
 
     order = {
-        "order_id": len(orders) + 1,
-        "customer": {
-            "name": customer_name,
-            "address": address,
-            "phone": phone
-        },
-        "items": order_items,
-        "total": total,
-        "status": "pending",
+        "order_id":   len(orders) + 1,
+        "customer":   {"name": name, "address": address, "phone": phone},
+        "items":      order_items,
+        "total":      total,
+        "status":     "pending",
         "created_at": datetime.now().isoformat()
     }
-
     orders.append(order)
     write_json(ORDERS_FILE, orders)
-    session["cart"] = {}
-    session.modified = True
 
-    return jsonify({
-        "message": "Order placed successfully",
-        "order": order
-    })
+    return jsonify({"message": "Order placed successfully", "order": order})
+
+# ─────────────────────────────────────────────
+#  Orders API
+# ─────────────────────────────────────────────
 
 @app.route("/api/orders", methods=["GET"])
 def api_get_orders():
-    """API: Get all orders"""
-    orders = read_json(ORDERS_FILE)
-    return jsonify(orders)
+    return jsonify(read_json(ORDERS_FILE))
 
 @app.route("/api/orders/<int:order_id>", methods=["GET"])
 def api_get_order(order_id):
-    """API: Get order by ID"""
-    orders = read_json(ORDERS_FILE)
-    for order in orders:
-        if order["order_id"] == order_id:
-            return jsonify(order)
+    for o in read_json(ORDERS_FILE):
+        if o["order_id"] == order_id:
+            return jsonify(o)
     return jsonify({"error": "Order not found"}), 404
 
 @app.route("/api/orders/<int:order_id>/status", methods=["PUT"])
 def api_update_order_status(order_id):
-    """API: Update order status"""
-    orders = read_json(ORDERS_FILE)
-    data = request.json
-    new_status = data.get("status")
-    
+    orders     = read_json(ORDERS_FILE)
+    new_status = (request.get_json(force=True) or {}).get("status")
     if not new_status:
-        return jsonify({"error": "Status is required"}), 400
-    
-    for order in orders:
-        if order["order_id"] == order_id:
-            order["status"] = new_status
-            order["updated_at"] = datetime.now().isoformat()
+        return jsonify({"error": "status required"}), 400
+    for o in orders:
+        if o["order_id"] == order_id:
+            o["status"]     = new_status
+            o["updated_at"] = datetime.now().isoformat()
             write_json(ORDERS_FILE, orders)
-            return jsonify({
-                "message": "Order status updated",
-                "order": order
-            })
-    
+            return jsonify({"message": "Status updated", "order": o})
     return jsonify({"error": "Order not found"}), 404
 
-@app.route("/api/admin/products/add", methods=["POST"])
-def api_add_product():
-    """API: Add product"""
-    data = request.json
-    required_fields = ["name", "price", "description", "stock"]
-
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"error": f"{field} is required"}), 400
-
-    products = read_json(PRODUCTS_FILE)
-    new_product = {
-        "id": len(products) + 1,
-        "name": data["name"],
-        "price": float(data["price"]),
-        "description": data["description"],
-        "stock": int(data["stock"]),
-        "image": data.get("image", ""),
-        "category": data.get("category", "general"),
-        "created_at": datetime.now().isoformat()
-    }
-
-    products.append(new_product)
-    write_json(PRODUCTS_FILE, products)
-    return jsonify({
-        "message": "Product added",
-        "product": new_product
-    }), 201
-
-@app.route("/api/admin/products/edit/<int:product_id>", methods=["PUT"])
-def api_edit_product(product_id):
-    """API: Edit product"""
-    products = read_json(PRODUCTS_FILE)
-    data = request.json
-
-    for product in products:
-        if product["id"] == product_id:
-            product["name"] = data.get("name", product["name"])
-            product["price"] = float(data.get("price", product["price"]))
-            product["description"] = data.get("description", product["description"])
-            product["stock"] = int(data.get("stock", product["stock"]))
-            product["image"] = data.get("image", product.get("image", ""))
-            product["category"] = data.get("category", product.get("category", "general"))
-            product["updated_at"] = datetime.now().isoformat()
-            write_json(PRODUCTS_FILE, products)
-            return jsonify({
-                "message": "Product updated",
-                "product": product
-            })
-
-    return jsonify({"error": "Product not found"}), 404
-
-@app.route("/api/admin/products/delete/<int:product_id>", methods=["DELETE"])
-def api_delete_product(product_id):
-    """API: Delete product"""
-    products = read_json(PRODUCTS_FILE)
-    updated_products = [
-        product for product in products
-        if product["id"] != product_id
-    ]
-
-    if len(updated_products) == len(products):
-        return jsonify({"error": "Product not found"}), 404
-
-    write_json(PRODUCTS_FILE, updated_products)
-    return jsonify({"message": "Product deleted"})
+# ─────────────────────────────────────────────
+#  Admin / utility API
+# ─────────────────────────────────────────────
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
-        "status": "healthy",
-        "service": "ShopHub E-Commerce API",
-        "version": "2.0",
+        "status":    "healthy",
+        "service":   "ShopHub E-Commerce API",
+        "version":   "2.1",
         "timestamp": datetime.now().isoformat()
     })
 
 @app.route("/api/stats", methods=["GET"])
 def get_stats():
-    """Get store statistics"""
-    products = read_json(PRODUCTS_FILE)
-    orders = read_json(ORDERS_FILE)
-    
-    total_revenue = sum(order.get("total", 0) for order in orders)
-    total_products = len(products)
-    total_orders = len(orders)
-    out_of_stock = len([p for p in products if p.get("stock", 0) == 0])
-    
+    products       = read_json(PRODUCTS_FILE)
+    orders         = read_json(ORDERS_FILE)
+    total_revenue  = sum(o.get("total", 0) for o in orders)
+    total_orders   = len(orders)
     return jsonify({
-        "total_products": total_products,
-        "total_orders": total_orders,
-        "total_revenue": total_revenue,
-        "out_of_stock_products": out_of_stock,
-        "average_order_value": total_revenue / total_orders if total_orders > 0 else 0
+        "total_products":      len(products),
+        "total_orders":        total_orders,
+        "total_revenue":       total_revenue,
+        "out_of_stock":        len([p for p in products if p.get("stock", 0) == 0]),
+        "average_order_value": round(total_revenue / total_orders, 2) if total_orders else 0
     })
 
-# -------------------------
-# Error Handlers
-# -------------------------
+@app.route("/api/admin/products/add", methods=["POST"])
+def api_add_product():
+    data = request.get_json(force=True) or {}
+    for f in ["name", "price", "description", "stock"]:
+        if f not in data:
+            return jsonify({"error": f"{f} is required"}), 400
+    products = read_json(PRODUCTS_FILE)
+    product  = {
+        "id":          max((p["id"] for p in products), default=0) + 1,
+        "name":        data["name"],
+        "price":       float(data["price"]),
+        "description": data["description"],
+        "stock":       int(data["stock"]),
+        "image":       data.get("image", ""),
+        "category":    data.get("category", "general"),
+        "created_at":  datetime.now().isoformat()
+    }
+    products.append(product)
+    write_json(PRODUCTS_FILE, products)
+    return jsonify({"message": "Product added", "product": product}), 201
+
+# ─────────────────────────────────────────────
+#  Error handlers
+# ─────────────────────────────────────────────
 
 @app.errorhandler(404)
-def not_found(error):
-    """Handle 404 errors"""
-    return jsonify({
-        "error": "Not found",
-        "message": "The requested resource was not found"
-    }), 404
+def not_found(e):
+    return jsonify({"error": "Not found"}), 404
 
 @app.errorhandler(500)
-def internal_error(error):
-    """Handle 500 errors"""
-    return jsonify({
-        "error": "Internal server error",
-        "message": "Something went wrong on our end"
-    }), 500
+def internal_error(e):
+    return jsonify({"error": "Internal server error"}), 500
 
-@app.errorhandler(400)
-def bad_request(error):
-    """Handle 400 errors"""
-    return jsonify({
-        "error": "Bad request",
-        "message": "The request was invalid"
-    }), 400
-
-# -------------------------
-# Context Processor
-# -------------------------
-
-@app.context_processor
-def inject_cart_count():
-    """Inject cart count into all templates"""
-    return dict(cart_count=get_cart_count())
-
-# -------------------------
-# Run Application
-# -------------------------
+# ─────────────────────────────────────────────
+#  Entry point
+# ─────────────────────────────────────────────
 
 if __name__ == "__main__":
-    if not os.path.exists(PRODUCTS_FILE):
-        write_json(PRODUCTS_FILE, [])
-    if not os.path.exists(ORDERS_FILE):
-        write_json(ORDERS_FILE, [])
-    
-    print("=" * 50)
-    print("ShopHub E-Commerce Server Starting...")
-    print("=" * 50)
-    print("Home Page: http://localhost:5000/")
-    print("Products: http://localhost:5000/products")
-    print("Cart: http://localhost:5000/cart")
-    print("Checkout: http://localhost:5000/checkout")
-    print("Orders: http://localhost:5000/orders")
-    print("Test Images: http://localhost:5000/test-images")
-    print("=" * 50)
-    
+    for f in [PRODUCTS_FILE, ORDERS_FILE]:
+        if not os.path.exists(f):
+            write_json(f, [])
+
+    print("=" * 52)
+    print("  ShopHub E-Commerce  ·  http://localhost:5000")
+    print("=" * 52)
     app.run(host="0.0.0.0", port=5000, debug=True)

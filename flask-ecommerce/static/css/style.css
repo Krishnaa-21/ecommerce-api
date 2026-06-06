@@ -950,3 +950,33 @@ code { background: rgba(233,69,96,0.1); color: var(--accent); padding: 0.1rem 0.
   .page-header { padding: 60px 0 40px; }
   .search-section { position: static; }
 }
+/* ── ADDITIONAL FIXES ── */
+
+/* FIX: input-group-text left border bleed on search bar */
+.search-section .input-group-text {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid var(--border) !important;
+  border-right: none !important;
+  color: var(--muted);
+}
+
+/* FIX: product-footer push to bottom */
+.product-footer { margin-top: auto; }
+
+/* FIX: cart item wrapping on very small screens */
+@media (max-width: 480px) {
+  .cart-item { flex-wrap: wrap; }
+  .quantity-control { order: 3; }
+}
+
+/* FIX: badge inside nav overflows on mobile */
+@media (max-width: 576px) {
+  .navbar-nav { padding: 0.5rem 0; }
+}
+
+/* Better spinner color */
+.spinner-border {
+  color: var(--accent) !important;
+  border-color: rgba(233,69,96,0.2) !important;
+  border-top-color: var(--accent) !important;
+}
