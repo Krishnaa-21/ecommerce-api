@@ -3,82 +3,1148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShopHub — Products</title>
+    <title>Products — ShopHub Premium Tech</title>
+    <meta name="description" content="Browse our curated collection of premium tech products. Filter by category, price, and ratings.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* ══════════════════════════════════════════════════════════════
+           PRODUCTS PAGE EXCLUSIVE STYLES
+           ══════════════════════════════════════════════════════════════ */
+
+        /* ── PAGE HEADER ── */
+        .page-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 140px 0 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(220,38,38,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(220,38,38,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(220,38,38,0.1) 0%, transparent 70%);
+            filter: blur(80px);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(220,38,38,0.08);
+            border: 1px solid rgba(220,38,38,0.25);
+            color: var(--accent);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+        }
+
+        .page-header h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--white);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-header h1 i {
+            font-size: 0.7em;
+            color: var(--accent);
+        }
+
+        .page-header .lead {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.05rem;
+            color: var(--muted);
+            margin: 0;
+        }
+
+        /* ── BREADCRUMB ── */
+        .breadcrumb-section {
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+        }
+
+        .breadcrumb {
+            background: transparent;
+            margin: 0;
+            padding: 0;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            color: var(--muted);
+            padding: 0 0.5rem;
+        }
+
+        .breadcrumb-item a {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-item a:hover {
+            color: var(--white);
+        }
+
+        .breadcrumb-item.active {
+            color: var(--white);
+        }
+
+        /* ── TOOLBAR ── */
+        .products-toolbar {
+            background: var(--bg);
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input-group:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+        }
+
+        .search-input-group .search-icon {
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            color: var(--muted);
+        }
+
+        .search-input-group input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--white);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.95rem;
+            padding: 0.5rem 0;
+        }
+
+        .search-input-group input::placeholder {
+            color: var(--muted);
+        }
+
+        .search-input-group .btn {
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input-group .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .search-input-group .btn-primary:hover {
+            background: #B91C1C;
+            transform: translateY(-1px);
+        }
+
+        .search-input-group .btn-clear {
+            background: transparent;
+            color: var(--muted);
+            padding: 0.5rem 1rem;
+        }
+
+        .search-input-group .btn-clear:hover {
+            color: var(--white);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* ── FILTER & SORT ── */
+        .filter-sort-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.65rem 1.25rem;
+            color: var(--white);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-toggle-btn:hover {
+            border-color: var(--accent);
+            background: rgba(220,38,38,0.05);
+        }
+
+        .filter-toggle-btn i {
+            color: var(--accent);
+        }
+
+        .sort-dropdown {
+            position: relative;
+        }
+
+        .sort-dropdown select {
+            appearance: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.65rem 2.5rem 0.65rem 1rem;
+            color: var(--white);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .sort-dropdown select:hover {
+            border-color: var(--accent);
+        }
+
+        .sort-dropdown select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+        }
+
+        .sort-dropdown::after {
+            content: '\f0d7';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none;
+        }
+
+        .results-count {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .results-count strong {
+            color: var(--white);
+            font-weight: 700;
+        }
+
+        /* ── ACTIVE FILTERS ── */
+        .active-filters {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .active-filters-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .filter-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(220,38,38,0.1);
+            border: 1px solid rgba(220,38,38,0.3);
+            border-radius: 20px;
+            padding: 0.4rem 0.75rem;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.8rem;
+            color: var(--white);
+            transition: all 0.2s ease;
+        }
+
+        .filter-tag:hover {
+            background: rgba(220,38,38,0.15);
+        }
+
+        .filter-tag button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .filter-tag button:hover {
+            background: rgba(220,38,38,0.2);
+        }
+
+        .clear-all-filters {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .clear-all-filters:hover {
+            color: #B91C1C;
+        }
+
+        /* ── PRODUCTS SECTION ── */
+        .products-section {
+            background: var(--bg);
+            padding: 3rem 0 5rem;
+            min-height: 60vh;
+        }
+
+        /* ── SKELETON LOADER ── */
+        .skeleton-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .skeleton-img {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 0%,
+                rgba(255,255,255,0.08) 50%,
+                rgba(255,255,255,0.03) 100%
+            );
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .skeleton-text {
+            height: 16px;
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 0%,
+                rgba(255,255,255,0.08) 50%,
+                rgba(255,255,255,0.03) 100%
+            );
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+        }
+
+        .skeleton-text.short {
+            width: 60%;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 5rem 2rem;
+        }
+
+        .empty-state-icon {
+            width: 120px;
+            height: 120px;
+            background: rgba(220,38,38,0.1);
+            border: 2px solid rgba(220,38,38,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+        }
+
+        .empty-state-icon i {
+            font-size: 3rem;
+            color: var(--accent);
+        }
+
+        .empty-state h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            color: var(--muted);
+            max-width: 400px;
+            margin: 0 auto 2rem;
+        }
+
+        /* ── FILTER SIDEBAR (OFFCANVAS) ── */
+        .offcanvas {
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+        }
+
+        .offcanvas-header {
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .offcanvas-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        .btn-close {
+            filter: invert(1);
+            opacity: 0.6;
+        }
+
+        .offcanvas-body {
+            padding: 1.5rem;
+        }
+
+        .filter-section {
+            margin-bottom: 2rem;
+        }
+
+        .filter-section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-option:hover {
+            padding-left: 0.5rem;
+        }
+
+        .filter-option input[type="checkbox"],
+        .filter-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .filter-option label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            color: var(--white);
+            cursor: pointer;
+            flex: 1;
+            margin: 0;
+        }
+
+        .filter-option-count {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        /* Price Range Slider */
+        .price-range-inputs {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .price-input {
+            flex: 1;
+        }
+
+        .price-input label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.75rem;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .price-input input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            color: var(--white);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .price-input input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #050508;
+            border-top: 1px solid var(--border);
+            padding: 3rem 0 1.5rem;
+        }
+
+        .footer-brand {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-brand em {
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        .footer-about {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.6;
+            max-width: 280px;
+        }
+
+        .footer-heading {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .footer-link {
+            display: block;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+            color: var(--muted);
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+            width: fit-content;
+        }
+
+        .footer-link:hover {
+            color: var(--white);
+            padding-left: 6px;
+        }
+
+        .footer-divider {
+            border-color: var(--border);
+            margin: 2rem 0 1rem;
+            opacity: 0.5;
+        }
+
+        .footer-bottom {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .footer-bottom i {
+            color: var(--accent);
+        }
+
+        /* ── BACK TO TOP ── */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 8px 20px rgba(220,38,38,0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .back-to-top:hover {
+            background: #B91C1C;
+            transform: translateY(-4px);
+        }
+
+        .back-to-top.show {
+            display: flex;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 991px) {
+            .page-header {
+                padding: 120px 0 40px;
+            }
+
+            .page-header h1 {
+                font-size: 2.5rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .products-toolbar {
+                top: 56px;
+            }
+
+            .filter-sort-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .sort-dropdown select {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .page-header {
+                padding: 100px 0 30px;
+            }
+
+            .page-header h1 {
+                font-size: 2rem;
+            }
+
+            .search-input-group {
+                flex-wrap: wrap;
+            }
+
+            .search-input-group input {
+                width: 100%;
+                order: 1;
+            }
+
+            .search-input-group .search-icon {
+                order: 0;
+            }
+
+            .search-input-group .btn {
+                width: calc(50% - 0.25rem);
+                order: 2;
+            }
+
+            .back-to-top {
+                bottom: 20px;
+                right: 20px;
+                width: 44px;
+                height: 44px;
+            }
+        }
+
+        /* ── ACCESSIBILITY ── */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 4px;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
+
+<!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
-        <a class="navbar-brand" href="/"><span style="color:var(--accent)">Shop</span>Hub</a>
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-            <i class="fas fa-bars" style="color:var(--white)"></i>
+        <a class="navbar-brand" href="/" aria-label="ShopHub Home">Shop<em>Hub</em></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
         <div class="collapse navbar-collapse" id="nav">
-            <ul class="navbar-nav ms-auto gap-1">
+            <ul class="navbar-nav ms-auto align-items-center gap-1">
                 <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/products">Products</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/products" aria-current="page">Products</a></li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/cart">
-                        <i class="fas fa-shopping-bag me-1"></i>Cart
-                        <span id="cart-count" class="badge">0</span>
+                    <a class="nav-link cart-link" href="/cart" aria-label="Shopping cart with 0 items">
+                        <i class="fas fa-bag-shopping me-1" aria-hidden="true"></i>Cart
+                        <span id="cart-count" class="cart-badge" aria-live="polite">0</span>
                     </a>
                 </li>
                 <li class="nav-item"><a class="nav-link" href="/orders">Orders</a></li>
+                <li class="nav-item ms-2">
+                    <a href="/products" class="btn-nav-cta">Shop Now</a>
+                </li>
             </ul>
         </div>
     </div>
 </nav>
 
-<section class="page-header">
+<!-- PAGE HEADER -->
+<header class="page-header">
     <div class="container position-relative" style="z-index:1">
         <div class="hero-badge mb-3">Our Collection</div>
-        <h1><i class="fas fa-store me-3" style="color:var(--accent)"></i>Premium Products</h1>
+        <h1>
+            <i class="fas fa-store" aria-hidden="true"></i>
+            Premium Products
+        </h1>
         <p class="lead">Handpicked tech for the discerning buyer</p>
     </div>
-</section>
+</header>
 
-<section class="search-section">
+<!-- BREADCRUMB -->
+<nav class="breadcrumb-section" aria-label="Breadcrumb">
     <div class="container">
-        <div class="row align-items-center g-3">
-            <div class="col-md-8">
-                <div class="input-group">
-                    <span class="input-group-text" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-right:none;color:var(--muted)">
-                        <i class="fas fa-search"></i>
-                    </span>
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search products..." style="border-left:none!important">
-                    <button class="btn btn-primary px-4" onclick="searchProducts()">Search</button>
-                    <button class="btn btn-outline-secondary px-3" onclick="clearSearch()">
-                        <i class="fas fa-times"></i>
-                    </button>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Products</li>
+        </ol>
+    </div>
+</nav>
+
+<!-- TOOLBAR: SEARCH, FILTER, SORT -->
+<section class="products-toolbar">
+    <div class="container">
+        <!-- Search Bar -->
+        <div class="search-wrapper">
+            <div class="search-input-group" role="search">
+                <span class="search-icon" aria-hidden="true">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search products by name or description..." 
+                    aria-label="Search products"
+                >
+                <button class="btn btn-primary" onclick="searchProducts()" aria-label="Search">
+                    Search
+                </button>
+                <button class="btn btn-clear" onclick="clearSearch()" aria-label="Clear search" style="display:none" id="clearSearchBtn">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter & Sort Bar -->
+        <div class="filter-sort-bar">
+            <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
+                <button class="filter-toggle-btn" data-bs-toggle="offcanvas" data-bs-target="#filterSidebar" aria-label="Open filters">
+                    <i class="fas fa-filter" aria-hidden="true"></i>
+                    Filters
+                </button>
+                <div class="results-count" id="product-count" role="status" aria-live="polite">
+                    <strong>Loading...</strong>
                 </div>
             </div>
-            <div class="col-md-4 text-md-end">
-                <span id="product-count" style="color:var(--muted);font-size:.9rem"></span>
+            <div class="sort-dropdown">
+                <select id="sortSelect" onchange="sortProducts()" aria-label="Sort products">
+                    <option value="default">Sort by: Default</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="name-asc">Name: A to Z</option>
+                    <option value="name-desc">Name: Z to A</option>
+                    <option value="rating">Highest Rated</option>
+                </select>
             </div>
+        </div>
+
+        <!-- Active Filters -->
+        <div class="active-filters" id="activeFilters" style="display:none" role="region" aria-label="Active filters">
+            <span class="active-filters-label">Active Filters:</span>
+            <div id="activeFiltersList"></div>
+            <button class="clear-all-filters" onclick="clearAllFilters()" aria-label="Clear all filters">
+                Clear All
+            </button>
         </div>
     </div>
 </section>
 
-<section class="py-5" style="min-height:60vh">
+<!-- PRODUCTS SECTION -->
+<main class="products-section">
     <div class="container">
         <div id="products-container" class="row g-4">
-            <div class="col-12 text-center py-5">
-                <div class="spinner-border" style="width:3rem;height:3rem;"></div>
-                <p class="mt-3" style="color:var(--muted)">Loading products...</p>
+            <!-- Skeleton Loaders (shown while loading) -->
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="skeleton-card">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                    <div class="skeleton-text"></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="skeleton-card">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                    <div class="skeleton-text"></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="skeleton-card">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                    <div class="skeleton-text"></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="skeleton-card">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                    <div class="skeleton-text"></div>
+                </div>
             </div>
         </div>
-    </div>
-</section>
 
-<footer>
-    <div class="container text-center py-2">
-        <p class="mb-0" style="font-size:.85rem">&copy; 2024 ShopHub. Made with <i class="fas fa-heart" style="color:var(--accent)"></i> in India</p>
+        <!-- Empty State (shown when no results) -->
+        <div id="emptyState" class="empty-state" style="display:none">
+            <div class="empty-state-icon">
+                <i class="fas fa-box-open" aria-hidden="true"></i>
+            </div>
+            <h3>No Products Found</h3>
+            <p>We couldn't find any products matching your criteria. Try adjusting your filters or search terms.</p>
+            <button class="btn-primary-sh" onclick="clearAllFilters()">
+                <i class="fas fa-rotate-right me-2" aria-hidden="true"></i>Reset Filters
+            </button>
+        </div>
+    </div>
+</main>
+
+<!-- FILTER SIDEBAR (OFFCANVAS) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="filterSidebar" aria-labelledby="filterSidebarLabel">
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title" id="filterSidebarLabel">Filter Products</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close filters"></button>
+    </div>
+    <div class="offcanvas-body">
+        <!-- Category Filter -->
+        <div class="filter-section">
+            <h3 class="filter-section-title">Category</h3>
+            <div id="categoryFilters">
+                <!-- Dynamically populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Price Range Filter -->
+        <div class="filter-section">
+            <h3 class="filter-section-title">Price Range</h3>
+            <div class="price-range-inputs">
+                <div class="price-input">
+                    <label for="minPrice">Min Price</label>
+                    <input type="number" id="minPrice" placeholder="₹0" min="0">
+                </div>
+                <div class="price-input">
+                    <label for="maxPrice">Max Price</label>
+                    <input type="number" id="maxPrice" placeholder="₹10000" min="0">
+                </div>
+            </div>
+            <button class="btn-primary-sh w-100 mt-3" onclick="applyPriceFilter()">
+                Apply Price Filter
+            </button>
+        </div>
+
+        <!-- Rating Filter -->
+        <div class="filter-section">
+            <h3 class="filter-section-title">Customer Rating</h3>
+            <div id="ratingFilters">
+                <div class="filter-option">
+                    <input type="radio" id="rating5" name="rating" value="5">
+                    <label for="rating5">5 Stars</label>
+                </div>
+                <div class="filter-option">
+                    <input type="radio" id="rating4" name="rating" value="4">
+                    <label for="rating4">4 Stars & Up</label>
+                </div>
+                <div class="filter-option">
+                    <input type="radio" id="rating3" name="rating" value="3">
+                    <label for="rating3">3 Stars & Up</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apply Filters Button -->
+        <button class="btn-primary-sh w-100 mt-4" onclick="applyFilters()" data-bs-dismiss="offcanvas">
+            Apply Filters
+        </button>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer role="contentinfo">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-12">
+                <div class="footer-brand">Shop<em>Hub</em></div>
+                <p class="footer-about">Your premium destination for quality tech. Every product curated, every delivery trusted.</p>
+            </div>
+            <div class="col-lg-2 col-md-4 col-6">
+                <h3 class="footer-heading">Navigate</h3>
+                <nav aria-label="Footer navigation">
+                    <a href="/" class="footer-link">Home</a>
+                    <a href="/products" class="footer-link">Products</a>
+                    <a href="/cart" class="footer-link">My Cart</a>
+                    <a href="/orders" class="footer-link">Orders</a>
+                </nav>
+            </div>
+            <div class="col-lg-3 col-md-4 col-6">
+                <h3 class="footer-heading">Support</h3>
+                <nav aria-label="Support links">
+                    <a href="#" class="footer-link">Help Center</a>
+                    <a href="#" class="footer-link">Track Order</a>
+                    <a href="#" class="footer-link">Returns</a>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                </nav>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <h3 class="footer-heading">Contact</h3>
+                <address style="font-style:normal">
+                    <div class="footer-link" style="margin-bottom:0.5rem">
+                        <i class="fas fa-envelope me-2" aria-hidden="true"></i>support@shophub.in
+                    </div>
+                    <div class="footer-link" style="margin-bottom:0.5rem">
+                        <i class="fas fa-phone me-2" aria-hidden="true"></i>+91 98765 43210
+                    </div>
+                    <div class="footer-link">
+                        <i class="fas fa-map-marker-alt me-2" aria-hidden="true"></i>Mumbai, India
+                    </div>
+                </address>
+            </div>
+        </div>
+        <hr class="footer-divider">
+        <div class="footer-bottom">
+            &copy; 2024 ShopHub. Made with <i class="fas fa-heart" aria-hidden="true"></i> in India
+        </div>
     </div>
 </footer>
 
+<!-- BACK TO TOP BUTTON -->
+<button class="back-to-top" id="backToTop" aria-label="Back to top">
+    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+</button>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/static/script.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// PRODUCTS PAGE FUNCTIONALITY
+// ══════════════════════════════════════════════════════════════
+
+// Back to Top Button
+const backToTopBtn = document.getElementById('backToTop');
+
+window.addEventListener('scroll', () => {
+    if (window.pageYOffset > 400) {
+        backToTopBtn.classList.add('show');
+    } else {
+        backToTopBtn.classList.remove('show');
+    }
+});
+
+backToTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Show/Hide Clear Search Button
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+searchInput.addEventListener('input', () => {
+    if (searchInput.value.trim()) {
+        clearSearchBtn.style.display = 'block';
+    } else {
+        clearSearchBtn.style.display = 'none';
+    }
+});
+
+// Debounced Search
+let searchTimeout;
+searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        searchProducts();
+    }, 300);
+});
+
+// Search on Enter Key
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchProducts();
+    }
+});
+
+// Placeholder functions - these should be implemented in script.js
+function searchProducts() {
+    console.log('Search triggered:', searchInput.value);
+    // Implementation should be in script.js
+}
+
+function clearSearch() {
+    searchInput.value = '';
+    clearSearchBtn.style.display = 'none';
+    searchProducts();
+}
+
+function sortProducts() {
+    const sortValue = document.getElementById('sortSelect').value;
+    console.log('Sort by:', sortValue);
+    // Implementation should be in script.js
+}
+
+function applyFilters() {
+    console.log('Applying filters');
+    // Implementation should be in script.js
+}
+
+function clearAllFilters() {
+    // Clear search
+    clearSearch();
+    
+    // Clear checkboxes
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[type="radio"]').forEach(rb => rb.checked = false);
+    
+    // Clear price inputs
+    document.getElementById('minPrice').value = '';
+    document.getElementById('maxPrice').value = '';
+    
+    // Hide active filters
+    document.getElementById('activeFilters').style.display = 'none';
+    
+    // Reload products
+    searchProducts();
+}
+
+function applyPriceFilter() {
+    const minPrice = document.getElementById('minPrice').value;
+    const maxPrice = document.getElementById('maxPrice').value;
+    console.log('Price filter:', minPrice, maxPrice);
+    // Implementation should be in script.js
+}
+
+// Update product count display
+function updateProductCount(showing, total) {
+    const countEl = document.getElementById('product-count');
+    if (showing === total) {
+        countEl.innerHTML = `Showing <strong>${total}</strong> products`;
+    } else {
+        countEl.innerHTML = `Showing <strong>${showing}</strong> of <strong>${total}</strong> products`;
+    }
+}
+
+// Show empty state
+function showEmptyState() {
+    document.getElementById('products-container').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+}
+
+// Hide empty state
+function hideEmptyState() {
+    document.getElementById('products-container').style.display = 'flex';
+    document.getElementById('emptyState').style.display = 'none';
+}
+</script>
+
 </body>
 </html>

@@ -6,167 +6,1301 @@
     <title>ShopHub — Checkout</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background: var(--bg);
+        }
+        .page-header {
+            padding: 130px 0 60px;
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border);
+        }
+        .page-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(220,38,38,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(220,38,38,.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        .page-header-orb {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(220,38,38,.12) 0%, transparent 70%);
+            top: -200px;
+            right: -100px;
+            border-radius: 50%;
+            filter: blur(60px);
+            pointer-events: none;
+        }
+        .page-eyebrow {
+            font-family: 'Syne', sans-serif;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: .75rem;
+        }
+        .page-h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            line-height: 1.05;
+            color: var(--white);
+        }
+        .page-h1 em {
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        /* CHECKOUT CARD */
+        .checkout-card {
+            background: rgba(255,255,255,.02);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .checkout-card-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,.01);
+        }
+        .checkout-card-header h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--white);
+            margin: 0;
+        }
+        .checkout-card-body {
+            padding: 2rem;
+        }
+
+        /* STEP INDICATOR */
+        .steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 2.5rem;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-family: 'Syne', sans-serif;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted);
+            transition: color .3s;
+        }
+        .step.active {
+            color: var(--white);
+        }
+        .step.done {
+            color: var(--success);
+        }
+        .step-num {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .8rem;
+            font-weight: 700;
+            transition: all .3s;
+            background: transparent;
+        }
+        .step.active .step-num {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .step.done .step-num {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+        .step-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+            margin: 0 .75rem;
+            position: relative;
+        }
+        .step.done ~ .step-line::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            background: var(--success);
+            animation: fillLine 0.4s ease;
+        }
+        @keyframes fillLine {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @media (max-width: 768px) {
+            .steps {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            .step {
+                justify-content: flex-start;
+            }
+            .step-line {
+                display: none;
+            }
+        }
+
+        /* FORM FIELDS */
+        .form-section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 1.25rem;
+            margin-top: .5rem;
+        }
+        .sh-label {
+            font-family: 'Syne', sans-serif;
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: .5px;
+            margin-bottom: .4rem;
+            display: block;
+        }
+        .sh-input {
+            width: 100%;
+            background: rgba(255,255,255,.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: .8rem 1rem;
+            color: var(--white);
+            font-family: 'Syne', sans-serif;
+            font-size: .9rem;
+            transition: all .3s;
+        }
+        .sh-input::placeholder {
+            color: var(--muted);
+        }
+        .sh-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(220,38,38,.05);
+            box-shadow: 0 0 0 3px rgba(220,38,38,.12);
+        }
+        .sh-input.is-invalid {
+            border-color: #ef4444;
+            background: rgba(239,68,68,.05);
+            box-shadow: 0 0 0 3px rgba(239,68,68,.1);
+        }
+        .sh-input.is-valid {
+            border-color: var(--success);
+            background: rgba(16,185,129,.03);
+        }
+        .invalid-msg {
+            font-family: 'Syne', sans-serif;
+            font-size: .72rem;
+            color: #ef4444;
+            margin-top: .35rem;
+            display: none;
+        }
+        .sh-input.is-invalid ~ .invalid-msg {
+            display: block;
+        }
+
+        /* PAYMENT OPTIONS */
+        .payment-option {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all .25s;
+            margin-bottom: .75rem;
+            position: relative;
+        }
+        .payment-option:hover:not(.disabled) {
+            border-color: rgba(220,38,38,.3);
+            background: rgba(255,255,255,.01);
+        }
+        .payment-option.selected {
+            border-color: var(--accent);
+            background: rgba(220,38,38,.06);
+        }
+        .payment-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .payment-option.disabled:hover {
+            border-color: var(--border);
+            background: transparent;
+        }
+        .payment-option input[type=radio] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .radio-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .25s;
+            flex-shrink: 0;
+        }
+        .payment-option.selected .radio-dot {
+            border-color: var(--accent);
+        }
+        .radio-dot::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            transform: scale(0);
+            transition: transform .2s;
+        }
+        .payment-option.selected .radio-dot::after {
+            transform: scale(1);
+        }
+        .payment-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(255,255,255,.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .payment-info strong {
+            font-family: 'Syne', sans-serif;
+            font-size: .88rem;
+            font-weight: 700;
+            color: var(--white);
+            display: block;
+            margin-bottom: .1rem;
+        }
+        .payment-info span {
+            font-family: 'Syne', sans-serif;
+            font-size: .75rem;
+            color: var(--muted);
+        }
+        .payment-badge {
+            margin-left: auto;
+            font-family: 'Syne', sans-serif;
+            font-size: .62rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: .25rem .6rem;
+            border-radius: 50px;
+            background: rgba(16,185,129,.1);
+            border: 1px solid rgba(16,185,129,.25);
+            color: var(--success);
+        }
+        .payment-badge.soon {
+            color: var(--muted);
+            background: rgba(255,255,255,.04);
+            border-color: var(--border);
+        }
+
+        .btn-place-order {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent) 0%, #b91c1c 100%);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Syne', sans-serif;
+            font-size: .88rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 1.1rem;
+            cursor: pointer;
+            transition: all .3s;
+            margin-top: 1.5rem;
+            box-shadow: 0 8px 24px rgba(220,38,38,.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+        }
+        .btn-place-order:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 35px rgba(220,38,38,.4);
+        }
+        .btn-place-order:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-place-order:focus-visible {
+            outline: 2px solid var(--white);
+            outline-offset: 2px;
+        }
+
+        /* ORDER SUMMARY SIDEBAR */
+        .order-summary-card {
+            background: rgba(255,255,255,.02);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            position: sticky;
+            top: 100px;
+        }
+        @media (max-width: 991px) {
+            .order-summary-card {
+                position: static;
+            }
+        }
+        .order-summary-header {
+            padding: 1.5rem 1.75rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,.01);
+        }
+        .order-summary-header h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--white);
+            margin: 0;
+        }
+        .order-items-list {
+            padding: 1.25rem 1.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .order-items-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .order-items-list::-webkit-scrollbar-track {
+            background: rgba(255,255,255,.02);
+        }
+        .order-items-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        .order-item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .65rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .order-item-row:last-child {
+            border-bottom: none;
+        }
+        .order-item-name {
+            font-family: 'Syne', sans-serif;
+            font-size: .85rem;
+            color: var(--muted);
+        }
+        .order-item-name strong {
+            color: var(--accent);
+            margin-right: .25rem;
+        }
+        .order-item-price {
+            font-family: 'Syne', sans-serif;
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .order-totals {
+            padding: 1.25rem 1.75rem;
+            border-top: 1px solid var(--border);
+            background: rgba(255,255,255,.01);
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Syne', sans-serif;
+            font-size: .85rem;
+            color: var(--muted);
+            margin-bottom: .6rem;
+        }
+        .grand-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding-top: .75rem;
+            margin-top: .5rem;
+            border-top: 1px solid var(--border);
+        }
+        .grand-label {
+            font-family: 'Syne', sans-serif;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .grand-value {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        /* SUCCESS STATE */
+        .success-screen {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(255,255,255,.02);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+        }
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: rgba(16,185,129,.1);
+            border: 2px solid rgba(16,185,129,.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 3rem;
+            color: var(--success);
+            animation: successPop .6s cubic-bezier(.175,.885,.32,1.275) both;
+        }
+        @keyframes successPop {
+            from {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        .success-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--success);
+            margin-bottom: .5rem;
+        }
+        .success-sub {
+            font-family: 'Syne', sans-serif;
+            font-size: .95rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+        .success-email-note {
+            font-family: 'Syne', sans-serif;
+            font-size: .8rem;
+            color: var(--accent);
+            margin-bottom: 2.5rem;
+            display: inline-block;
+            background: rgba(220,38,38,.05);
+            padding: .5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(220,38,38,.15);
+        }
+        .order-confirm-box {
+            display: inline-block;
+            background: rgba(255,255,255,.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem 3.5rem;
+            margin-bottom: 2.5rem;
+        }
+        @media (max-width: 576px) {
+            .order-confirm-box {
+                padding: 1.5rem 2rem;
+            }
+        }
+        .order-confirm-box .lbl {
+            font-family: 'Syne', sans-serif;
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: .25rem;
+        }
+        .order-confirm-box .val {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .checkout-toast {
+            background: rgba(0,0,0,.95);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--white);
+            font-family: 'Syne', sans-serif;
+            font-size: .85rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,.4);
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .checkout-toast.error {
+            border-left: 3px solid #ef4444;
+        }
+        .checkout-toast.success {
+            border-left: 3px solid var(--success);
+        }
+
+        /* Loading Spinner in Button */
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+            border-width: 2px;
+        }
+
+        /* Empty Cart Warning */
+        .empty-cart-warning {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+        .empty-cart-warning i {
+            font-size: 3rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+        .empty-cart-warning h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            color: var(--white);
+            margin-bottom: .5rem;
+        }
+        .empty-cart-warning p {
+            font-family: 'Syne', sans-serif;
+            font-size: .9rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+
+        /* Security Notice */
+        .security-notice {
+            text-align: center;
+            margin-top: 1rem;
+            font-family: 'Syne', sans-serif;
+            font-size: .72rem;
+            color: var(--muted);
+        }
+        .security-notice i {
+            color: var(--success);
+            margin-right: .35rem;
+        }
+
+        /* Screen Reader Only */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+    </style>
 </head>
 <body>
+
 <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
-        <a class="navbar-brand" href="/"><span style="color:var(--accent)">Shop</span>Hub</a>
-        <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
-                <a class="nav-link" href="/cart">
-                    <i class="fas fa-shopping-bag me-1"></i>Cart
-                    <span id="cart-count" class="badge">0</span>
-                </a>
-            </li>
-        </ul>
+        <a class="navbar-brand" href="/">Shop<em>Hub</em></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-label="Toggle navigation">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+            <ul class="navbar-nav ms-auto align-items-center gap-1">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="/products">Products</a></li>
+                <li class="nav-item">
+                    <a class="nav-link cart-link" href="/cart">
+                        <i class="fas fa-bag-shopping me-1"></i>Cart
+                        <span id="cart-count" class="cart-badge">0</span>
+                    </a>
+                </li>
+                <li class="nav-item"><a class="nav-link" href="/orders">Orders</a></li>
+            </ul>
+        </div>
     </div>
 </nav>
 
 <section class="page-header">
+    <div class="page-header-orb"></div>
     <div class="container position-relative" style="z-index:1">
-        <h1><i class="fas fa-credit-card me-3" style="color:var(--accent)"></i>Checkout</h1>
-        <p class="lead">Secure & fast order placement</p>
+        <div class="page-eyebrow">Almost There</div>
+        <h1 class="page-h1">Secure <em>Checkout</em></h1>
     </div>
 </section>
 
-<section class="py-4">
+<section class="py-5">
     <div class="container">
 
-        <!-- SUCCESS -->
-        <div id="success-message" style="display:none;">
-            <div class="success-anim">
-                <div class="success-icon-wrap">🎉</div>
-                <h2 style="font-family:'Playfair Display',serif;font-size:2.5rem;color:var(--success)">Order Confirmed!</h2>
-                <p style="color:var(--muted);font-size:1.1rem" class="mb-4">Your order has been placed successfully</p>
-                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:inline-block;padding:2rem 4rem;margin-bottom:2rem">
-                    <p style="color:var(--muted);margin-bottom:.25rem;font-size:.85rem">ORDER ID</p>
-                    <h3 style="font-family:'Playfair Display',serif;color:var(--accent)" id="order-id">#0</h3>
-                    <p style="color:var(--muted);margin-top:1rem;margin-bottom:.25rem;font-size:.85rem">TOTAL PAID</p>
-                    <h3 style="font-family:'Playfair Display',serif;color:var(--success)" id="order-total">₹0.00</h3>
+        <!-- SUCCESS SCREEN -->
+        <div id="success-message" style="display:none">
+            <div class="success-screen">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
                 </div>
-                <br>
+                <h2 class="success-title">Order Confirmed!</h2>
+                <p class="success-sub">Your order has been placed and is being processed.</p>
+                <div class="success-email-note">
+                    <i class="fas fa-envelope me-2"></i>Confirmation email sent
+                </div>
+                <div class="order-confirm-box">
+                    <div class="lbl">Order ID</div>
+                    <div class="val" style="color:var(--accent)" id="order-id">#0</div>
+                    <div class="lbl mt-3">Total Paid</div>
+                    <div class="val" style="color:var(--success)" id="order-total">₹0.00</div>
+                </div>
                 <div class="d-flex gap-3 justify-content-center flex-wrap">
-                    <a href="/orders" class="btn btn-primary btn-lg"><i class="fas fa-list me-2"></i>My Orders</a>
-                    <a href="/products" class="btn btn-outline-primary btn-lg"><i class="fas fa-shopping-bag me-2"></i>Continue Shopping</a>
+                    <a href="/orders" class="btn-primary-sh">
+                        <i class="fas fa-box me-2"></i>View My Orders
+                    </a>
+                    <a href="/products" class="btn-ghost-sh">
+                        <i class="fas fa-bag-shopping me-2"></i>Continue Shopping
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- FORM -->
+        <!-- CHECKOUT FORM -->
         <div id="checkout-form">
             <div class="row g-4">
+
+                <!-- LEFT: FORM -->
                 <div class="col-lg-7">
                     <div class="checkout-card">
-                        <h4><i class="fas fa-truck me-2" style="color:var(--accent)"></i>Shipping Details</h4>
-                        <form id="orderForm" novalidate>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">First Name *</label>
-                                    <input type="text" id="firstName" class="form-control" placeholder="Arjun" required>
-                                    <div class="invalid-feedback">Required</div>
+                        <div class="checkout-card-header">
+                            <h4><i class="fas fa-truck me-2" style="color:var(--accent)"></i>Shipping & Payment</h4>
+                        </div>
+                        <div class="checkout-card-body">
+
+                            <!-- STEPS -->
+                            <div class="steps" role="progressbar" aria-label="Checkout progress">
+                                <div class="step active" id="step-1">
+                                    <div class="step-num">1</div>
+                                    <span>Shipping</span>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Last Name *</label>
-                                    <input type="text" id="lastName" class="form-control" placeholder="Sharma" required>
-                                    <div class="invalid-feedback">Required</div>
+                                <div class="step-line"></div>
+                                <div class="step" id="step-2">
+                                    <div class="step-num">2</div>
+                                    <span>Payment</span>
                                 </div>
-                                <div class="col-12">
-                                    <label class="form-label">Phone Number *</label>
-                                    <input type="tel" id="phone" class="form-control" placeholder="+91 98765 43210" required>
-                                    <div class="invalid-feedback">Required</div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Street Address *</label>
-                                    <input type="text" id="address" class="form-control" placeholder="123 MG Road, Flat 4B" required>
-                                    <div class="invalid-feedback">Required</div>
-                                </div>
-                                <div class="col-md-5">
-                                    <label class="form-label">City *</label>
-                                    <input type="text" id="city" class="form-control" placeholder="Mumbai" required>
-                                    <div class="invalid-feedback">Required</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">State *</label>
-                                    <input type="text" id="state" class="form-control" placeholder="Maharashtra" required>
-                                    <div class="invalid-feedback">Required</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">PIN Code *</label>
-                                    <input type="text" id="zip" class="form-control" placeholder="400001" required>
-                                    <div class="invalid-feedback">Required</div>
+                                <div class="step-line"></div>
+                                <div class="step" id="step-3">
+                                    <div class="step-num">3</div>
+                                    <span>Confirm</span>
                                 </div>
                             </div>
 
-                            <h5 class="mt-4 mb-3" style="font-family:'Playfair Display',serif;color:var(--white)">
-                                <i class="fas fa-credit-card me-2" style="color:var(--accent)"></i>Payment
-                            </h5>
-                            <div class="payment-method selected" onclick="selectPayment(this)">
-                                <input type="radio" name="payment" value="cod" checked>
-                                <i class="fas fa-money-bill-wave" style="color:var(--success)"></i>
-                                <div>
-                                    <strong>Cash on Delivery</strong>
-                                    <div style="font-size:.8rem;color:var(--muted)">Pay when you receive</div>
+                            <form id="orderForm" novalidate>
+                                <!-- SHIPPING -->
+                                <div class="form-section-title">
+                                    <i class="fas fa-map-marker-alt me-2"></i>Delivery Address
                                 </div>
-                            </div>
-                            <div class="payment-method" onclick="selectPayment(this)">
-                                <input type="radio" name="payment" value="upi">
-                                <i class="fas fa-mobile-alt" style="color:var(--accent)"></i>
-                                <div>
-                                    <strong>UPI / GPay / PhonePe</strong>
-                                    <div style="font-size:.8rem;color:var(--muted)">Coming soon</div>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <label class="sh-label" for="firstName">First Name *</label>
+                                        <input type="text" 
+                                               id="firstName" 
+                                               class="sh-input" 
+                                               placeholder="Arjun" 
+                                               required
+                                               aria-required="true"
+                                               aria-describedby="firstName-error">
+                                        <div class="invalid-msg" id="firstName-error" role="alert">Please enter your first name</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="sh-label" for="lastName">Last Name *</label>
+                                        <input type="text" 
+                                               id="lastName" 
+                                               class="sh-input" 
+                                               placeholder="Sharma" 
+                                               required
+                                               aria-required="true"
+                                               aria-describedby="lastName-error">
+                                        <div class="invalid-msg" id="lastName-error" role="alert">Please enter your last name</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="sh-label" for="phone">Phone Number *</label>
+                                        <input type="tel" 
+                                               id="phone" 
+                                               class="sh-input" 
+                                               placeholder="+91 98765 43210" 
+                                               required
+                                               pattern="^[+]?[0-9\s-]{10,}$"
+                                               aria-required="true"
+                                               aria-describedby="phone-error">
+                                        <div class="invalid-msg" id="phone-error" role="alert">Please enter a valid phone number</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="sh-label" for="address">Street Address *</label>
+                                        <input type="text" 
+                                               id="address" 
+                                               class="sh-input" 
+                                               placeholder="123 MG Road, Flat 4B" 
+                                               required
+                                               aria-required="true"
+                                               aria-describedby="address-error">
+                                        <div class="invalid-msg" id="address-error" role="alert">Please enter your address</div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="sh-label" for="city">City *</label>
+                                        <input type="text" 
+                                               id="city" 
+                                               class="sh-input" 
+                                               placeholder="Indore" 
+                                               required
+                                               aria-required="true"
+                                               aria-describedby="city-error">
+                                        <div class="invalid-msg" id="city-error" role="alert">Required</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="sh-label" for="state">State *</label>
+                                        <input type="text" 
+                                               id="state" 
+                                               class="sh-input" 
+                                               placeholder="Madhya Pradesh" 
+                                               required
+                                               aria-required="true"
+                                               aria-describedby="state-error">
+                                        <div class="invalid-msg" id="state-error" role="alert">Required</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="sh-label" for="zip">PIN Code *</label>
+                                        <input type="text" 
+                                               id="zip" 
+                                               class="sh-input" 
+                                               placeholder="452001" 
+                                               required
+                                               pattern="^[0-9]{6}$"
+                                               maxlength="6"
+                                               aria-required="true"
+                                               aria-describedby="zip-error">
+                                        <div class="invalid-msg" id="zip-error" role="alert">Enter 6-digit PIN</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="payment-method" onclick="selectPayment(this)">
-                                <input type="radio" name="payment" value="card">
-                                <i class="fas fa-credit-card" style="color:var(--accent2)"></i>
-                                <div>
-                                    <strong>Credit / Debit Card</strong>
-                                    <div style="font-size:.8rem;color:var(--muted)">Coming soon</div>
-                                </div>
-                            </div>
 
-                            <button type="submit" class="btn btn-primary w-100 btn-lg mt-4" style="padding:1rem">
-                                <i class="fas fa-check-circle me-2"></i>Place Order
-                            </button>
-                        </form>
+                                <!-- PAYMENT -->
+                                <div class="form-section-title">
+                                    <i class="fas fa-credit-card me-2"></i>Payment Method
+                                </div>
+                                <div role="radiogroup" aria-label="Payment method selection">
+                                    <div class="payment-option selected" 
+                                         data-payment="cod" 
+                                         role="radio" 
+                                         aria-checked="true"
+                                         tabindex="0">
+                                        <input type="radio" name="payment" value="cod" checked>
+                                        <div class="radio-dot"></div>
+                                        <div class="payment-icon">
+                                            <i class="fas fa-money-bill-wave" style="color:var(--success)"></i>
+                                        </div>
+                                        <div class="payment-info">
+                                            <strong>Cash on Delivery</strong>
+                                            <span>Pay when your order arrives</span>
+                                        </div>
+                                        <span class="payment-badge">Available</span>
+                                    </div>
+                                    <div class="payment-option disabled" 
+                                         data-payment="upi" 
+                                         role="radio" 
+                                         aria-checked="false"
+                                         aria-disabled="true"
+                                         tabindex="-1">
+                                        <input type="radio" name="payment" value="upi" disabled>
+                                        <div class="radio-dot"></div>
+                                        <div class="payment-icon">
+                                            <i class="fas fa-mobile-alt" style="color:var(--accent)"></i>
+                                        </div>
+                                        <div class="payment-info">
+                                            <strong>UPI / GPay / PhonePe</strong>
+                                            <span>Instant payment via UPI</span>
+                                        </div>
+                                        <span class="payment-badge soon">Soon</span>
+                                    </div>
+                                    <div class="payment-option disabled" 
+                                         data-payment="card" 
+                                         role="radio" 
+                                         aria-checked="false"
+                                         aria-disabled="true"
+                                         tabindex="-1">
+                                        <input type="radio" name="payment" value="card" disabled>
+                                        <div class="radio-dot"></div>
+                                        <div class="payment-icon">
+                                            <i class="fas fa-credit-card" style="color:var(--gold)"></i>
+                                        </div>
+                                        <div class="payment-info">
+                                            <strong>Credit / Debit Card</strong>
+                                            <span>Visa, Mastercard, RuPay</span>
+                                        </div>
+                                        <span class="payment-badge soon">Soon</span>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn-place-order" id="submit-btn">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Place Order</span>
+                                </button>
+
+                                <div class="security-notice">
+                                    <i class="fas fa-shield-halved"></i>
+                                    Your data is encrypted with 256-bit SSL
+                                </div>
+                            </form>
+
+                        </div>
                     </div>
                 </div>
 
+                <!-- RIGHT: ORDER SUMMARY -->
                 <div class="col-lg-5">
-                    <div class="order-summary">
-                        <h4><i class="fas fa-receipt me-2" style="color:var(--accent)"></i>Order Summary</h4>
-                        <div id="order-items">
+                    <div class="order-summary-card">
+                        <div class="order-summary-header">
+                            <h4><i class="fas fa-receipt me-2" style="color:var(--accent)"></i>Order Summary</h4>
+                        </div>
+                        <div class="order-items-list" id="order-items" role="region" aria-label="Order items">
                             <div class="text-center py-3">
-                                <div class="spinner-border spinner-border-sm"></div>
-                                <span class="ms-2" style="color:var(--muted)">Loading...</span>
+                                <div class="spinner-border spinner-border-sm" style="color:var(--accent)" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2" style="font-family:'Syne',sans-serif;font-size:.85rem;color:var(--muted)">Loading…</span>
                             </div>
                         </div>
-                        <div class="order-total">
-                            <div class="d-flex justify-content-between mb-2" style="color:var(--muted);font-size:.9rem">
-                                <span>Subtotal</span><span id="summary-subtotal">₹0.00</span>
+                        <div class="order-totals">
+                            <div class="total-row">
+                                <span>Subtotal</span>
+                                <span id="summary-subtotal">₹0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-3" style="color:var(--muted);font-size:.9rem">
-                                <span>GST (18%)</span><span id="summary-tax">₹0.00</span>
+                            <div class="total-row">
+                                <span>GST (18%)</span>
+                                <span id="summary-tax">₹0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between" style="font-size:1.3rem;font-family:'Playfair Display',serif;font-weight:700;color:var(--accent)">
-                                <span>Total</span><span id="summary-total">₹0.00</span>
+                            <div class="total-row">
+                                <span>Shipping</span>
+                                <span style="color:var(--success)">Free</span>
                             </div>
-                        </div>
-                        <div class="text-center mt-3">
-                            <small style="color:var(--muted)">
-                                <i class="fas fa-shield-halved me-1" style="color:var(--success)"></i>
-                                256-bit SSL encryption
-                            </small>
+                            <div class="grand-total-row">
+                                <span class="grand-label">Total</span>
+                                <span class="grand-value" id="summary-total">₹0.00</span>
+                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
 </section>
 
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container" role="alert" aria-live="polite" aria-atomic="true"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/static/script.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+<script>
+// Toast Notification System
+function showToast(message, type = 'error') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `checkout-toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+    `;
+    container.appendChild(toast);
+    
+    // Screen reader announcement
+    const announcement = document.createElement('div');
+    announcement.className = 'sr-only';
+    announcement.setAttribute('role', 'status');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.textContent = message;
+    document.body.appendChild(announcement);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => {
+            toast.remove();
+            announcement.remove();
+        }, 300);
+    }, 4000);
+}
+
+// Format currency
+function formatCurrency(amount) {
+    return `₹${parseFloat(amount).toFixed(2)}`;
+}
+
+// Update step indicator
+function updateSteps(currentStep) {
+    for (let i = 1; i <= 3; i++) {
+        const step = document.getElementById(`step-${i}`);
+        if (i < currentStep) {
+            step.classList.add('done');
+            step.classList.remove('active');
+        } else if (i === currentStep) {
+            step.classList.add('active');
+            step.classList.remove('done');
+        } else {
+            step.classList.remove('active', 'done');
+        }
+    }
+}
+
+// Payment method selection
+function selectPayment(element) {
+    if (element.classList.contains('disabled')) return;
+    
+    document.querySelectorAll('.payment-option').forEach(opt => {
+        opt.classList.remove('selected');
+        opt.setAttribute('aria-checked', 'false');
+        opt.querySelector('input[type=radio]').checked = false;
+    });
+    
+    element.classList.add('selected');
+    element.setAttribute('aria-checked', 'true');
+    element.querySelector('input[type=radio]').checked = true;
+    
+    updateSteps(3);
+}
+
+// Attach payment option click handlers
+document.querySelectorAll('.payment-option:not(.disabled)').forEach(option => {
+    option.addEventListener('click', function() {
+        selectPayment(this);
+    });
+    
+    // Keyboard support
+    option.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectPayment(this);
+        }
+    });
+});
+
+// Real-time form validation
+const formInputs = document.querySelectorAll('.sh-input');
+
+formInputs.forEach(input => {
+    input.addEventListener('blur', function() {
+        validateField(this);
+        // Update step indicator when shipping info is filled
+        if (checkShippingComplete()) {
+            updateSteps(2);
+        }
+    });
+    
+    input.addEventListener('input', function() {
+        if (this.classList.contains('is-invalid')) {
+            validateField(this);
+        }
+    });
+});
+
+function validateField(field) {
+    const value = field.value.trim();
+    
+    if (!field.hasAttribute('required') && !value) {
+        field.classList.remove('is-invalid', 'is-valid');
+        return true;
+    }
+    
+    if (!value) {
+        field.classList.add('is-invalid');
+        field.classList.remove('is-valid');
+        return false;
+    }
+    
+    // Pattern validation
+    if (field.hasAttribute('pattern')) {
+        const pattern = new RegExp(field.getAttribute('pattern'));
+        if (!pattern.test(value)) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            return false;
+        }
+    }
+    
+    // Phone specific validation
+    if (field.id === 'phone') {
+        const phonePattern = /^[+]?[0-9\s-]{10,}$/;
+        if (!phonePattern.test(value)) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            return false;
+        }
+    }
+    
+    // PIN code specific validation
+    if (field.id === 'zip') {
+        if (!/^[0-9]{6}$/.test(value)) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            return false;
+        }
+    }
+    
+    field.classList.remove('is-invalid');
+    field.classList.add('is-valid');
+    return true;
+}
+
+function checkShippingComplete() {
+    const shippingFields = ['firstName', 'lastName', 'phone', 'address', 'city', 'state', 'zip'];
+    return shippingFields.every(id => {
+        const field = document.getElementById(id);
+        return field.value.trim() && !field.classList.contains('is-invalid');
+    });
+}
+
+function validateForm() {
+    let isValid = true;
+    
+    formInputs.forEach(input => {
+        if (!validateField(input)) {
+            isValid = false;
+        }
+    });
+    
+    return isValid;
+}
+
+// Load order summary
+async function loadOrderSummary() {
+    const container = document.getElementById('order-items');
+    
+    try {
+        const response = await fetch('/api/cart');
+        
+        if (!response.ok) throw new Error('Failed to load cart');
+        
+        const data = await response.json();
+        
+        if (!data.success || !data.cart || !data.cart.items || data.cart.items.length === 0) {
+            // Empty cart - show warning
+            document.getElementById('checkout-form').innerHTML = `
+                <div class="empty-cart-warning">
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>Your cart is empty</h3>
+                    <p>Add some items to your cart before checking out.</p>
+                    <a href="/products" class="btn-primary-sh">
+                        <i class="fas fa-shopping-bag me-2"></i>Browse Products
+                    </a>
+                </div>
+            `;
+            return;
+        }
+        
+        // Render order items
+        container.innerHTML = data.cart.items.map(item => `
+            <div class="order-item-row">
+                <div class="order-item-name">
+                    <strong>${item.quantity}×</strong> ${item.name}
+                </div>
+                <div class="order-item-price">${formatCurrency(item.price * item.quantity)}</div>
+            </div>
+        `).join('');
+        
+        // Update totals
+        document.getElementById('summary-subtotal').textContent = formatCurrency(data.cart.subtotal);
+        document.getElementById('summary-tax').textContent = formatCurrency(data.cart.tax);
+        document.getElementById('summary-total').textContent = formatCurrency(data.cart.total);
+        
+        // Store cart data for order submission
+        window.cartData = data.cart;
+        
+    } catch (error) {
+        console.error('Error loading order summary:', error);
+        container.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-exclamation-triangle" style="color:#ef4444;font-size:2rem;"></i>
+                <p style="font-family:'Syne',sans-serif;font-size:.85rem;color:var(--muted);margin-top:1rem;">
+                    Failed to load cart
+                </p>
+                <button onclick="loadOrderSummary()" class="btn-primary-sh mt-2" style="padding:.5rem 1rem;font-size:.8rem;">
+                    Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Place order
+async function placeOrder(formData) {
+    const submitBtn = document.getElementById('submit-btn');
+    const originalContent = submitBtn.innerHTML;
+    
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-2">Processing...</span>
+    `;
+    
+    try {
+        const response = await fetch('/api/orders/place', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                shipping: formData,
+                payment_method: document.querySelector('input[name="payment"]:checked').value,
+                cart: window.cartData
+            })
+        });
+        
+        if (!response.ok) throw new Error('Order placement failed');
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success screen
+            document.getElementById('checkout-form').style.display = 'none';
+            document.getElementById('success-message').style.display = 'block';
+            document.getElementById('order-id').textContent = `#${data.order_id}`;
+            document.getElementById('order-total').textContent = formatCurrency(data.total);
+            
+            // Update cart count
+            if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Screen reader announcement
+            const announcement = document.createElement('div');
+            announcement.className = 'sr-only';
+            announcement.setAttribute('role', 'status');
+            announcement.setAttribute('aria-live', 'polite');
+            announcement.textContent = 'Order placed successfully';
+            document.body.appendChild(announcement);
+            setTimeout(() => announcement.remove(), 3000);
+            
+        } else {
+            throw new Error(data.message || 'Order placement failed');
+        }
+        
+    } catch (error) {
+        console.error('Error placing order:', error);
+        showToast(error.message || 'Failed to place order. Please try again.', 'error');
+        
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalContent;
+    }
+}
+
+// Form submission
+document.getElementById('orderForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+        showToast('Please fill in all required fields correctly', 'error');
+        
+        // Focus first invalid field
+        const firstInvalid = document.querySelector('.sh-input.is-invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+        }
+        return;
+    }
+    
+    // Collect form data
+    const formData = {
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        state: document.getElementById('state').value.trim(),
+        zip: document.getElementById('zip').value.trim()
+    };
+    
+    placeOrder(formData);
+});
+
+// Load order summary on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrderSummary();
+    
+    // Update cart count if function exists
+    if (typeof updateCartCount === 'function') {
+        updateCartCount();
+    }
+});
+
+// Keyboard navigation for payment options
+document.addEventListener('keydown', function(e) {
+    const paymentOptions = Array.from(document.querySelectorAll('.payment-option:not(.disabled)'));
+    const focused = document.activeElement;
+    const currentIndex = paymentOptions.indexOf(focused);
+    
+    if (currentIndex === -1) return;
+    
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % paymentOptions.length;
+        paymentOptions[nextIndex].focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prevIndex = (currentIndex - 1 + paymentOptions.length) % paymentOptions.length;
+        paymentOptions[prevIndex].focus();
+    }
+});
+</script>
+
 </body>
 </html>
